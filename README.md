@@ -1,5 +1,19 @@
 # Crateyard
 
+<!--<p align="center">
+  <img src=".github/assets/logo.svg" width="420" alt="Crateyard: a goofy undead crate with nerd glasses beside a floppy-disk headstone">
+</p>-->
+
+<img align="right" src=".github/assets/logo.svg" width="220" height="220" alt="Crateyard: a goofy undead crate with nerd glasses beside a floppy-disk headstone">
+
+<p align="center">
+  <a href="https://github.com/skorotkiewicz/registry/actions/workflows/build.yml"><img src="https://github.com/skorotkiewicz/registry/actions/workflows/build.yml/badge.svg" alt="Build and release status"></a>
+  <a href="https://github.com/skorotkiewicz/registry/releases/latest"><img src="https://img.shields.io/github/v/release/skorotkiewicz/registry?color=315b3f" alt="Latest release"></a>
+  <a href="https://aur.archlinux.org/packages/crateyard-bin"><img src="https://img.shields.io/aur/version/crateyard-bin?label=AUR&amp;color=315b3f" alt="AUR package version"></a>
+  <a href="https://go.dev/"><img src="https://img.shields.io/badge/Go-1.23%2B-315b3f?logo=go&amp;logoColor=white" alt="Build with Go 1.23 or newer"></a>
+  <a href="https://github.com/skorotkiewicz/registry/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-315b3f" alt="MIT license"></a>
+</p>
+
 Crateyard is a small self-hosted registry for Rust crates and npm packages, with a web browser for your packages. Use normal `cargo publish`, `npm publish`, and dependency installs. Written in Go with one TOML parsing dependency. Package metadata and archives live on disk.
 
 Each configured user has a nickname and their own token. By default the registry is private, so reading packages requires a token too. Set `private = false` for anonymous browsing and downloads. Publishing and yanking always require a user token. All users have the same permissions, with no per-package ownership rules, so only give tokens to trusted publishers.

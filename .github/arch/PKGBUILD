@@ -24,5 +24,6 @@ package() {
   install -Dm755 "$srcdir/crateyard" "$pkgdir/usr/bin/crateyard"
   install -Dm644 "$srcdir/config.toml" "$pkgdir/usr/share/doc/$pkgname/config.example.toml"
   install -Dm644 "$srcdir/README.md" "$pkgdir/usr/share/doc/$pkgname/README.md"
+  install -Dm644 "$srcdir/.github/assets/logo.svg" "$pkgdir/usr/share/doc/$pkgname/.github/assets/logo.svg"
   install -Dm644 "$srcdir/LICENSE" "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }

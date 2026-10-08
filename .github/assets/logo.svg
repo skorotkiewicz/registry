@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 400" role="img" aria-labelledby="title desc">
+  <title id="title">Crateyard</title>
+  <desc id="desc">A cheerful undead shipping crate with crooked nerd glasses waves beside a floppy-disk headstone marked RIP v0.0.1. Home sweet localhost.</desc>
+  <rect x="8" y="8" width="464" height="384" rx="28" fill="#f5f3eb"/>
+
+  <!-- A little terminal magic. No necromancy dependency required. -->
+  <g fill="#315b3f" font-family="monospace" font-weight="bold">
+    <text x="84" y="75" font-size="22" transform="rotate(-12 84 75)">&lt;/&gt;</text>
+    <text x="339" y="78" font-size="14" transform="rotate(9 339 78)">200 OK</text>
+  </g>
+  <path d="M365 97v16m-8-8h16" fill="none" stroke="#a94722" stroke-width="4" stroke-linecap="round"/>
+  <rect x="142" y="57" width="7" height="7" rx="1" fill="#dbad6a"/>
+  <rect x="319" y="85" width="6" height="6" rx="1" fill="#315b3f"/>
+  <ellipse cx="240" cy="268" rx="155" ry="13" fill="#d5dbd0"/>
+
+  <g stroke="#22372c" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
+    <!-- Here lies a version we definitely still depend on. -->
+    <path d="M91 253V128a40 40 0 0 1 80 0v125" fill="#bac9b2"/>
+    <path d="M103 251v-10m56 10v-10" fill="none" stroke="#71836b" stroke-width="3"/>
+    <g fill="#22372c" stroke="none" font-family="monospace" text-anchor="middle">
+      <text x="131" y="133" font-size="22" font-weight="bold">RIP</text>
+      <text x="131" y="153" font-size="12">v0.0.1</text>
+    </g>
+    <rect x="109" y="169" width="45" height="49" rx="4" fill="#315b3f" stroke-width="3"/>
+    <path d="M119 169h25v16h-25z" fill="#f5f3eb" stroke-width="3"/>
+    <path d="M137 171v11" stroke-width="3"/>
+    <rect x="118" y="196" width="27" height="22" rx="2" fill="#f5f3eb" stroke-width="3"/>
+    <path d="M123 203h17m-17 7h12" stroke="#71836b" stroke-width="2"/>
+
+    <!-- Cardboard arms, extremely questionable uptime. -->
+    <path d="M196 204q-24-5-32 21m190-27q20 21 31-7" fill="none" stroke-width="6"/>
+    <ellipse cx="163" cy="231" rx="14" ry="10" transform="rotate(-18 163 231)" fill="#f5f3eb" stroke-width="4"/>
+    <path d="M379 197l-7-12q-3-8 2-9l6 8-1-18q0-6 5-5l4 16 4-13q3-5 7-2l-3 21q9-4 11 2 0 9-10 14z" fill="#f5f3eb" stroke-width="4"/>
+
+    <!-- Open flaps double as ecosystem stickers. -->
+    <path d="M194 142l-24-28 60-12 29 32z" fill="#f0ca85"/>
+    <path d="M259 134l39-33 57 19-31 22z" fill="#e4b775"/>
+    <path d="M324 142l31-22v106l-31 22z" fill="#bc773c"/>
+    <rect x="194" y="142" width="130" height="106" rx="8" fill="#dbad6a"/>
+    <path d="M248 145h19v100h-19z" fill="#f5d78c" stroke="none"/>
+    <path d="M339 158v51" fill="none" stroke="#a15e30" stroke-width="3"/>
+    <g fill="#22372c" stroke="none" font-family="monospace" font-size="12" font-weight="bold">
+      <text x="199" y="126" transform="rotate(-12 199 126)">.rs</text>
+      <text x="299" y="123" transform="rotate(14 299 123)">npm</text>
+    </g>
+
+    <!-- Glasses slightly askew. The pupils are on different release schedules. -->
+    <path d="M195 178l16 3m43 1q5-6 11-2m43-4 17-4" fill="none"/>
+    <rect x="211" y="169" width="43" height="35" rx="10" fill="#f5f3eb"/>
+    <rect x="265" y="166" width="43" height="35" rx="10" fill="#f5f3eb"/>
+    <circle cx="238" cy="187" r="6" fill="#22372c" stroke="none"/>
+    <circle cx="279" cy="183" r="7" fill="#22372c" stroke="none"/>
+    <circle cx="240" cy="185" r="2" fill="#fff" stroke="none"/>
+    <circle cx="281" cy="180" r="2" fill="#fff" stroke="none"/>
+    <path d="M218 157l20-3m40-1 20 5" fill="none" stroke-width="3"/>
+    <path d="M236 213q27 18 53-2-16 32-38 20z" fill="#22372c" stroke-width="3"/>
+    <path d="M250 221l11 2-2 10-10-2z" fill="#f5f3eb" stroke="none"/>
+    <path d="M211 237v-15m-6 6 6-6 6 6" fill="none" stroke-width="3"/>
+    <path d="M283 235v6m5-6v6m7-6v6m5-6v6" stroke-width="2"/>
+    <ellipse cx="215" cy="255" rx="22" ry="9" fill="#bc773c" stroke-width="4"/>
+    <ellipse cx="305" cy="255" rx="22" ry="9" fill="#bc773c" stroke-width="4"/>
+  </g>
+
+  <path d="M77 262l-4-11m4 11 6-8m86 9-5-9m5 9 6-5m185 4 4-13m-4 13-6-6m42 5 6-8" fill="none" stroke="#315b3f" stroke-width="3" stroke-linecap="round"/>
+  <text x="240" y="336" text-anchor="middle" fill="#22372c" font-family="Georgia, 'Times New Roman', serif" font-size="60" font-weight="bold" letter-spacing="-2">Crateyard</text>
+  <text x="240" y="366" text-anchor="middle" fill="#315b3f" font-family="monospace" font-size="12" font-weight="bold" letter-spacing="2">HOME SWEET LOCALHOST</text>
+</svg>

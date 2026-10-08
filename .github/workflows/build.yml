@@ -48,13 +48,14 @@ jobs:
           name="crateyard-${GOOS}-${GOARCH}"
           extension=""
           if [[ "$GOOS" == windows ]]; then extension=".exe"; fi
-          mkdir -p "dist/$name"
+          mkdir -p "dist/$name/.github/assets"
           go build -trimpath -ldflags="-s -w -X main.version=$(cat VERSION)" -o "dist/$name/crateyard$extension" ./cmd/crateyard
           cp config.toml README.md LICENSE "dist/$name/"
+          cp .github/assets/logo.svg "dist/$name/.github/assets/"
           if [[ "$GOOS" == windows ]]; then
-            (cd "dist/$name" && zip "../$name.zip" crateyard.exe config.toml README.md LICENSE)
+            (cd "dist/$name" && zip "../$name.zip" crateyard.exe config.toml README.md LICENSE .github/assets/logo.svg)
           else
-            tar -czf "dist/$name.tar.gz" -C "dist/$name" crateyard config.toml README.md LICENSE
+            tar -czf "dist/$name.tar.gz" -C "dist/$name" crateyard config.toml README.md LICENSE .github/assets/logo.svg
           fi
       - uses: actions/upload-artifact@v4
         with:
