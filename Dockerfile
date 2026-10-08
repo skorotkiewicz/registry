@@ -1,6 +1,7 @@
 FROM golang:1.25-alpine AS build
 WORKDIR /src
-COPY go.mod main.go ./
+COPY go.mod main.go web.go ./
+COPY web ./web
 RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /registry . && mkdir /data
 
 FROM scratch

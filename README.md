@@ -1,8 +1,8 @@
 # Crate and npm registry
 
-A small self-hosted registry written in Go, with no external dependencies. Use normal `cargo publish`, `npm publish`, and dependency installs. Package metadata and archives live on disk.
+A small self-hosted registry for Rust crates and npm packages, with a web browser for your packages. Use normal `cargo publish`, `npm publish`, and dependency installs. Written in Go with no external dependencies. Package metadata and archives live on disk.
 
-All package reads and writes require one shared token. Only health checks and Cargo's registry configuration are public. Anyone with the token can publish under any name or yank any crate. Use it for trusted publishers, not as a public multi-user registry.
+All package reads and writes require one shared token. The web page, its static assets, health checks, and Cargo's registry configuration are public, but package information requires authentication. Anyone with the token can publish under any name or yank any crate. Use it for trusted publishers, not as a public multi-user registry.
 
 ## Run
 
@@ -24,7 +24,7 @@ Keep the token somewhere safe. Reuse it after restarting, and set the same token
 | `LISTEN_ADDR` | `127.0.0.1:8080` | HTTP bind address |
 | `DATA_DIR` | `data` | Persistent storage directory |
 
-For another machine, set `PUBLIC_URL` to its actual URL. For example, `https://packages.example.com`. Put the server behind an HTTPS reverse proxy before using it outside localhost. The proxy must forward `/cargo/` and `/npm/`, allow 64 MiB request bodies, and preserve the `Authorization` header. The server does not trust forwarded headers to construct download URLs.
+For another machine, set `PUBLIC_URL` to its actual URL. For example, `https://packages.example.com`. Put the server behind an HTTPS reverse proxy before using it outside localhost. Forward all paths to the server so the web interface and both registries work. The proxy must allow 64 MiB request bodies and preserve the `Authorization` header. The server does not trust forwarded headers to construct download URLs.
 
 ### Docker
 
@@ -40,7 +40,19 @@ docker run -d --name own-registry \
   own-registry
 ```
 
-The container runs as UID 65532. A named volume stores the packages. If you use a bind mount instead, make its directory writable by that UID. Keep `PUBLIC_URL` consistent with the address used by clients, including its scheme and port.
+A named volume keeps packages across container restarts. If you use a bind mount instead, its directory must be writable by the container. Keep `PUBLIC_URL` consistent with the address used by clients, including its scheme and port.
+
+## Web interface
+
+Open `http://localhost:8080` and enter your registry token. You can:
+
+- Browse npm packages and Rust crates, or filter by name and package type.
+- View published versions, npm tags, and yanked crate versions.
+- Get install commands and client configuration snippets.
+
+Click Refresh after publishing. Disconnect clears the package list and token. The token stays only in the page's memory, not in cookies, URLs, or browser storage. Reloading the page also clears it.
+
+The interface is read-only. Publish from Cargo or npm using the instructions below. It is embedded in the server binary, so you do not need a separate frontend server or build step.
 
 ## Cargo
 
@@ -116,7 +128,7 @@ Replace both URLs in `.npmrc` when using another host. For HTTPS, the auth key s
 - Run exactly one server process per data directory. Requests share one lock. This is intended for small team registries, not high-throughput hosting.
 - Requests are limited to 64 MiB. npm's base64 encoding means its tarball limit is about 48 MiB, less metadata overhead. Uploads and package metadata are buffered in memory.
 - Stop the server before backing up the entire data directory for a consistent backup. Restore it with the same file permissions. The token is not stored in that directory.
-- No upstream proxy, public package mirror, user accounts, ownership API, search, npm login, npm audit, npm unpublish, standalone dist-tag editing, or provenance bundles. Configure tokens directly and use `--no-audit` for npm installs. Archives are stored without extracting or inspecting their manifests. Only publish packages you trust.
+- No upstream proxy, public package mirror, user accounts, ownership API, Cargo/npm search endpoints, npm login, npm audit, npm unpublish, standalone dist-tag editing, or provenance bundles. Configure tokens directly and use `--no-audit` for npm installs. Archives are stored without extracting or inspecting their manifests. Only publish packages you trust.
 
 ## Tests
 
@@ -126,4 +138,4 @@ go vet ./...
 bash smoke.sh
 ```
 
-The smoke test requires Go, Cargo, npm, Node, curl, and Bash. It starts a localhost server, publishes and consumes real packages, checks duplicate rejection and Cargo yank/undo, then restarts the server to check persistence. Test files stay in the printed temporary directory. Set `SMOKE_PORT` if port 18080 is occupied.
+The smoke test requires Go, Cargo, npm, Node, curl, and Bash. It starts a localhost server, publishes and consumes real packages, checks duplicate rejection and Cargo yank/undo, then restarts the server to check persistence and the web package catalog. Test files stay in the printed temporary directory. Set `SMOKE_PORT` if port 18080 is occupied.
