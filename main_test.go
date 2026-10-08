@@ -12,7 +12,8 @@ import (
 )
 
 func TestRegistry(t *testing.T) {
-	s := &registry{data: t.TempDir(), base: "http://localhost:8080", token: "test-token-at-least-16"}
+	const testToken = "test-token-at-least-16"
+	s := &registry{data: t.TempDir(), base: "http://localhost:8080", users: []user{{Nick: "tester", Token: testToken}}, private: true, uploadLimit: maxUpload}
 	request := func(method, path string, body []byte, token string) *httptest.ResponseRecorder {
 		t.Helper()
 		r := httptest.NewRequest(method, path, bytes.NewReader(body))
@@ -37,8 +38,8 @@ func TestRegistry(t *testing.T) {
 	}
 	check(request("GET", "/npm/example", nil, ""), 401)
 	check(request("GET", "/cargo/ex/am/example", nil, "wrong"), 401)
-	check(request("PUT", "/cargo/api/v1/crates/new", []byte{255, 255, 255, 255}, s.token), 400)
-	check(request("PUT", "/npm/../escape", []byte(`{}`), "Bearer "+s.token), 400)
+	check(request("PUT", "/cargo/api/v1/crates/new", []byte{255, 255, 255, 255}, testToken), 400)
+	check(request("PUT", "/npm/../escape", []byte(`{}`), "Bearer "+testToken), 400)
 
 	archive := []byte("test archive bytes, clients check real archives in smoke.sh")
 	publish := func(name, version string) *httptest.ResponseRecorder {
@@ -49,13 +50,13 @@ func TestRegistry(t *testing.T) {
 		b.Write(meta)
 		_ = binary.Write(&b, binary.LittleEndian, uint32(len(archive)))
 		b.Write(archive)
-		return request("PUT", "/cargo/api/v1/crates/new", b.Bytes(), s.token)
+		return request("PUT", "/cargo/api/v1/crates/new", b.Bytes(), testToken)
 	}
 	check(publish("my-crate", "1.0.0"), 200)
 	check(publish("my-crate", "1.0.0"), 409)
 	check(publish("my_crate", "2.0.0"), 409)
 	check(publish("my-crate", "1.0.0-01"), 400)
-	index := request("GET", "/cargo/my/-c/my-crate", nil, s.token)
+	index := request("GET", "/cargo/my/-c/my-crate", nil, testToken)
 	check(index, 200)
 	var entry map[string]any
 	if err := json.Unmarshal(index.Body.Bytes(), &entry); err != nil {
@@ -65,13 +66,13 @@ func TestRegistry(t *testing.T) {
 	if dep["name"] != "alias" || dep["package"] != "other" || dep["req"] != "^1" {
 		t.Fatalf("incorrect dependency translation: %v", dep)
 	}
-	check(request("DELETE", "/cargo/api/v1/crates/my-crate/1.0.0/yank", nil, s.token), 200)
-	index = request("GET", "/cargo/my/-c/my-crate", nil, s.token)
+	check(request("DELETE", "/cargo/api/v1/crates/my-crate/1.0.0/yank", nil, testToken), 200)
+	index = request("GET", "/cargo/my/-c/my-crate", nil, testToken)
 	if !strings.Contains(index.Body.String(), `"yanked":true`) {
 		t.Fatal("yank not stored")
 	}
-	check(request("PUT", "/cargo/api/v1/crates/my-crate/1.0.0/unyank", nil, s.token), 200)
-	download := request("GET", "/cargo/api/v1/crates/my-crate/1.0.0/download", nil, s.token)
+	check(request("PUT", "/cargo/api/v1/crates/my-crate/1.0.0/unyank", nil, testToken), 200)
+	download := request("GET", "/cargo/api/v1/crates/my-crate/1.0.0/download", nil, testToken)
 	check(download, 200)
 	if !bytes.Equal(download.Body.Bytes(), archive) {
 		t.Fatal("crate bytes changed")
@@ -90,15 +91,15 @@ func TestRegistry(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		return request("PUT", "/npm/@mine%2fexample", b, "Bearer "+s.token)
+		return request("PUT", "/npm/@mine%2fexample", b, "Bearer "+testToken)
 	}
 	check(npmPublish("1.0.0", "latest"), 201)
 	check(npmPublish("1.0.0", "latest"), 409)
 	check(npmPublish("2.0.0-beta.1", "beta"), 201)
 	check(npmPublish("2.0.0", "../bad"), 400)
 	// A fresh server reads the same records without in-memory state.
-	s = &registry{data: s.data, base: s.base, token: s.token}
-	metadata := request("GET", "/npm/@mine%2fexample", nil, "Bearer "+s.token)
+	s = &registry{data: s.data, base: s.base, users: s.users, private: s.private, uploadLimit: s.uploadLimit}
+	metadata := request("GET", "/npm/@mine%2fexample", nil, "Bearer "+testToken)
 	check(metadata, 200)
 	var pkg npmPackage
 	if err := json.Unmarshal(metadata.Body.Bytes(), &pkg); err != nil {
@@ -107,13 +108,13 @@ func TestRegistry(t *testing.T) {
 	if len(pkg.Versions) != 2 || pkg.Tags["latest"] != "1.0.0" || pkg.Tags["beta"] != "2.0.0-beta.1" || pkg.Attachments != nil {
 		t.Fatalf("bad persisted metadata: %+v", pkg)
 	}
-	download = request("GET", "/npm/@mine%2fexample/-/example-1.0.0.tgz", nil, "Bearer "+s.token)
+	download = request("GET", "/npm/@mine%2fexample/-/example-1.0.0.tgz", nil, "Bearer "+testToken)
 	check(download, 200)
 	if !bytes.Equal(download.Body.Bytes(), archive) {
 		t.Fatal("npm bytes changed")
 	}
-	check(request("GET", "/npm/@mine%2fexample/-/../../metadata.json", nil, "Bearer "+s.token), 404)
-	check(request("GET", "/npm/missing", nil, "Bearer "+s.token), 404)
+	check(request("GET", "/npm/@mine%2fexample/-/../../metadata.json", nil, "Bearer "+testToken), 404)
+	check(request("GET", "/npm/missing", nil, "Bearer "+testToken), 404)
 	// Corrupt records must not be mistaken for a missing package and overwritten.
 	if err := os.MkdirAll(s.path("npm", "broken", ""), 0700); err != nil {
 		t.Fatal(err)
@@ -121,7 +122,7 @@ func TestRegistry(t *testing.T) {
 	if err := os.WriteFile(s.path("npm", "broken", "metadata.json"), []byte("{"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	check(request("GET", "/npm/broken", nil, "Bearer "+s.token), 500)
+	check(request("GET", "/npm/broken", nil, "Bearer "+testToken), 500)
 }
 
 func TestVersionValidation(t *testing.T) {

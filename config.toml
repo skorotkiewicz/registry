@@ -1,0 +1,26 @@
+# Copy to config.local.toml, set your tokens, then run:
+# ./registry -config config.local.toml
+listen_addr = "127.0.0.1:8080"
+public_url = "http://localhost:8080"
+data_dir = "data"
+
+# true: reading packages requires a user token.
+# false: anyone can browse and download. Publishing and yanking still require a token.
+private = true
+
+max_upload_mib = 64
+max_header_bytes = 16384
+read_header_timeout = "10s"
+read_timeout = "2m"
+write_timeout = "2m"
+idle_timeout = "1m"
+
+# Each user needs a unique nickname and token. Generate tokens with: openssl rand -hex 32
+# Empty tokens deliberately prevent startup until you configure your own.
+[[users]]
+nick = "admin"
+token = ""
+
+# [[users]]
+# nick = "alice"
+# token = ""

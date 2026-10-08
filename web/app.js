@@ -71,7 +71,7 @@
     buttons.forEach((button) => { button.disabled = true; });
     try {
       const response = await fetch('/api/packages', {
-        headers: { Authorization: `Bearer ${token}` }, cache: 'no-store', credentials: 'omit',
+        headers: token ? { Authorization: `Bearer ${token}` } : {}, cache: 'no-store', credentials: 'omit',
       });
       if (current !== generation) return;
       if (response.status === 401) {
@@ -91,7 +91,9 @@
       $('npm-config').textContent = `@selfhost:registry=${catalog.url}/npm/\n//${url.host}/npm/:_authToken=\${REGISTRY_TOKEN}`;
       $('npm-publish').textContent = `npm publish --registry ${catalog.url}/npm/`;
       render();
-      $('status').textContent = 'Connected. Refresh after publishing to see new packages.';
+      $('status').textContent = token
+        ? 'Connected. Refresh after publishing to see new packages.'
+        : 'Public registry. Publishing still requires your user token.';
     } catch (error) {
       if (current === generation) $('status').textContent = error.message;
     } finally {
@@ -109,4 +111,15 @@
   $('disconnect').addEventListener('click', disconnect);
   $('search').addEventListener('input', render);
   $('kind').addEventListener('change', render);
+  $('browse-public').addEventListener('click', () => { token = ''; refresh(); });
+
+  fetch('/cargo/config.json', { cache: 'no-store', credentials: 'omit' })
+    .then((response) => { if (!response.ok) throw new Error('Could not load registry settings.'); return response.json(); })
+    .then((settings) => {
+      if (settings['auth-required'] === false) {
+        $('browse-public').hidden = false;
+        if (!token && $('browser').hidden) refresh();
+      }
+    })
+    .catch((error) => { if (!token) $('status').textContent = error.message; });
 })();

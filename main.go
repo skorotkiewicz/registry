@@ -11,6 +11,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -21,7 +22,6 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-	"time"
 )
 
 const maxUpload = 64 << 20
@@ -33,8 +33,11 @@ var (
 )
 
 type registry struct {
-	data, base, token string
-	mu                sync.Mutex
+	data, base  string
+	users       []user
+	private     bool
+	uploadLimit int64
+	mu          sync.Mutex
 }
 
 type npmPackage struct {
@@ -52,28 +55,33 @@ type cratePackage struct {
 	Versions []map[string]any `json:"versions"`
 }
 
-func env(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return fallback
-}
-
 func main() {
-	r := &registry{data: env("DATA_DIR", "data"), base: strings.TrimRight(env("PUBLIC_URL", "http://localhost:8080"), "/"), token: os.Getenv("REGISTRY_TOKEN")}
-	u, err := url.Parse(r.base)
-	if err != nil || u.Host == "" || (u.Scheme != "http" && u.Scheme != "https") || u.Path != "" || u.RawQuery != "" || u.Fragment != "" || u.User != nil {
-		log.Fatal("PUBLIC_URL must be an http(s) origin without a path, credentials, query, or fragment")
+	path := flag.String("config", "config.toml", "path to server TOML configuration")
+	flag.Parse()
+	c, err := loadConfig(*path)
+	if err != nil {
+		log.Fatal(err)
 	}
-	if len(r.token) < 16 || strings.ContainsAny(r.token, " \t\r\n") {
-		log.Fatal("REGISTRY_TOKEN must contain at least 16 characters and no whitespace")
-	}
+	r := &registry{data: c.DataDir, base: c.PublicURL, users: c.Users, private: c.Private, uploadLimit: c.MaxUploadMiB << 20}
 	if err := os.MkdirAll(r.data, 0700); err != nil {
 		log.Fatal(err)
 	}
-	s := &http.Server{Addr: env("LISTEN_ADDR", "127.0.0.1:8080"), Handler: r, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 2 * time.Minute, WriteTimeout: 2 * time.Minute, IdleTimeout: time.Minute, MaxHeaderBytes: 16 << 10}
-	log.Printf("registry listening on %s, public URL %s", s.Addr, r.base)
+	s := &http.Server{Addr: c.ListenAddr, Handler: r, ReadHeaderTimeout: c.ReadHeaderTimeout, ReadTimeout: c.ReadTimeout, WriteTimeout: c.WriteTimeout, IdleTimeout: c.IdleTimeout, MaxHeaderBytes: c.MaxHeaderBytes}
+	log.Printf("registry listening on %s, public URL %s, private=%t", s.Addr, r.base, r.private)
 	log.Fatal(s.ListenAndServe())
+}
+
+func (s *registry) nickname(token string) string {
+	if token == "" {
+		return ""
+	}
+	nick := ""
+	for _, u := range s.users {
+		if subtle.ConstantTimeCompare([]byte(token), []byte(u.Token)) == 1 {
+			nick = u.Nick
+		}
+	}
+	return nick
 }
 
 func reply(w http.ResponseWriter, status int, value any) {
@@ -98,11 +106,12 @@ func (s *registry) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if r.Method == "GET" && r.URL.Path == "/cargo/config.json" {
-		reply(w, 200, map[string]any{"dl": s.base + "/cargo/api/v1/crates/{crate}/{version}/download", "api": s.base + "/cargo", "auth-required": true})
+		reply(w, 200, map[string]any{"dl": s.base + "/cargo/api/v1/crates/{crate}/{version}/download", "api": s.base + "/cargo", "auth-required": s.private})
 		return
 	}
 	token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-	if subtle.ConstantTimeCompare([]byte(token), []byte(s.token)) != 1 {
+	publicRead := !s.private && (r.Method == "GET" || r.Method == "HEAD") && r.URL.Path != "/npm/-/whoami"
+	if s.nickname(token) == "" && !publicRead {
 		w.Header().Set("WWW-Authenticate", `Bearer realm="registry"`)
 		fail(w, 401, "valid registry token required")
 		return
@@ -110,7 +119,7 @@ func (s *registry) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// ponytail: one process and a global lock serialize requests; use a database for multiple writers or higher throughput.
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	r.Body = http.MaxBytesReader(w, r.Body, maxUpload)
+	r.Body = http.MaxBytesReader(w, r.Body, s.uploadLimit)
 	var err error
 	switch {
 	case r.URL.Path == "/api/packages" && r.Method == "GET":
@@ -125,7 +134,7 @@ func (s *registry) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		var size *http.MaxBytesError
 		if errors.As(err, &size) {
-			fail(w, 413, "upload exceeds 64 MiB")
+			fail(w, 413, fmt.Sprintf("upload exceeds %d MiB", s.uploadLimit>>20))
 			return
 		}
 		log.Printf("%s %s: %v", r.Method, r.URL.Path, err)
@@ -376,7 +385,7 @@ func (s *registry) npm(w http.ResponseWriter, r *http.Request) error {
 		return nil
 	}
 	if p == "-/whoami" && r.Method == "GET" {
-		reply(w, 200, map[string]string{"username": "selfhost"})
+		reply(w, 200, map[string]string{"username": s.nickname(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "))})
 		return nil
 	}
 	if strings.HasPrefix(p, "-/npm/v1/security/") && r.Method == "POST" {

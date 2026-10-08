@@ -10,7 +10,8 @@ import (
 )
 
 func TestWeb(t *testing.T) {
-	s := &registry{data: t.TempDir(), base: "https://packages.example.com", token: "web-test-token-123456"}
+	const testToken = "web-test-token-123456"
+	s := &registry{data: t.TempDir(), base: "https://packages.example.com", users: []user{{Nick: "tester", Token: testToken}}, private: true, uploadLimit: maxUpload}
 	request := func(method, path, token string, status int) *httptest.ResponseRecorder {
 		t.Helper()
 		r := httptest.NewRequest(method, path, nil)
@@ -26,7 +27,7 @@ func TestWeb(t *testing.T) {
 	}
 	for path, contentType := range map[string]string{"/": "text/html", "/web/app.js": "text/javascript", "/web/style.css": "text/css"} {
 		w := request("GET", path, "", 200)
-		if !strings.HasPrefix(w.Header().Get("Content-Type"), contentType) || w.Header().Get("Content-Security-Policy") == "" || strings.Contains(w.Body.String(), s.token) {
+		if !strings.HasPrefix(w.Header().Get("Content-Type"), contentType) || w.Header().Get("Content-Security-Policy") == "" || strings.Contains(w.Body.String(), testToken) {
 			t.Fatalf("unsafe or missing asset: %s", path)
 		}
 		if request("HEAD", path, "", 200).Body.Len() != 0 {
@@ -35,8 +36,8 @@ func TestWeb(t *testing.T) {
 	}
 	request("GET", "/api/packages", "", 401)
 	request("GET", "/api/packages", "wrong", 401)
-	request("GET", "/web/../main.go", s.token, 404)
-	w := request("GET", "/api/packages", s.token, 200)
+	request("GET", "/web/../main.go", testToken, 404)
+	w := request("GET", "/api/packages", testToken, 200)
 	if !strings.Contains(w.Body.String(), `"packages":[]`) {
 		t.Fatalf("empty catalog is not an array: %s", w.Body.String())
 	}
@@ -53,7 +54,7 @@ func TestWeb(t *testing.T) {
 	if err := save(s.path("npm", "@my/example", "metadata.json"), npmPackage{Name: "@my/example", Versions: map[string]map[string]any{"1.0.0": {"secret-extra": "not-for-catalog"}, "2.0.0-beta.1": {}}, Tags: map[string]string{"latest": "1.0.0", "beta": "2.0.0-beta.1"}}); err != nil {
 		t.Fatal(err)
 	}
-	w = request("GET", "/api/packages", s.token, 200)
+	w = request("GET", "/api/packages", testToken, 200)
 	var catalog struct {
 		URL      string           `json:"url"`
 		Packages []packageSummary `json:"packages"`
@@ -74,5 +75,5 @@ func TestWeb(t *testing.T) {
 	if err := os.WriteFile(s.path("cargo", "example-crate", "metadata.json"), []byte("{"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	request("GET", "/api/packages", s.token, 500)
+	request("GET", "/api/packages", testToken, 500)
 }

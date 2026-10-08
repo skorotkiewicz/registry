@@ -5,8 +5,20 @@ work=$(mktemp -d)
 port=${SMOKE_PORT:-18080}
 export REGISTRY_TOKEN=smoke-test-token-not-for-production
 export PUBLIC_URL="http://127.0.0.1:$port"
-export LISTEN_ADDR="127.0.0.1:$port"
-export DATA_DIR="$work/data"
+private=${SMOKE_PRIVATE:-true}
+case "$private" in true|false) ;; *) echo 'SMOKE_PRIVATE must be true or false'; exit 1 ;; esac
+cat > "$work/server.toml" <<EOF
+listen_addr = "127.0.0.1:$port"
+public_url = "$PUBLIC_URL"
+data_dir = "$work/data"
+private = $private
+[[users]]
+nick = "smokepublisher"
+token = "$REGISTRY_TOKEN"
+[[users]]
+nick = "second-user"
+token = "second-smoke-test-token"
+EOF
 export CARGO_HOME="$work/cargo-home"
 export CARGO_REGISTRIES_SELFHOST_TOKEN="$REGISTRY_TOKEN"
 export npm_config_cache="$work/npm-cache"
@@ -20,7 +32,7 @@ credential-provider = "cargo:token"
 EOF
 cd "$root"
 go build -o "$work/registry" .
-"$work/registry" > "$work/server.log" 2>&1 &
+"$work/registry" -config "$work/server.toml" > "$work/server.log" 2>&1 &
 pid=$!
 trap 'kill "$pid" 2>/dev/null || true; printf "Test files: %s\n" "$work"' EXIT
 ready=false
@@ -41,7 +53,12 @@ node -e 'let p=require("./package.json");p.version="2.0.0-beta.1";require("node:
 npm publish --tag beta --ignore-scripts
 cd "$work/npm-consumer"
 printf '{"name":"consumer","version":"1.0.0","private":true}\n' > package.json
-npm install @selfhost/smoke --ignore-scripts --no-audit
+if [[ "$private" == false ]]; then
+  printf 'registry=%s/npm/\n' "$PUBLIC_URL" > "$work/npm-anonymousrc"
+  npm --userconfig "$work/npm-anonymousrc" install @selfhost/smoke --ignore-scripts --no-audit
+else
+  npm install @selfhost/smoke --ignore-scripts --no-audit
+fi
 node -e 'const assert=require("node:assert/strict");assert.equal(require("@selfhost/smoke"),42);assert.equal(require("@selfhost/smoke/package.json").version,"1.0.0")'
 
 # Publish a crate, then a crate with a renamed optional dependency and features2.
@@ -88,13 +105,17 @@ edition = "2021"
 smoke-top = { version = "0.1.0", registry = "selfhost" }
 EOF
 printf 'fn main() { assert_eq!(smoke_top::answer(), 42); }\n' > src/main.rs
-cargo run
+if [[ "$private" == false ]]; then
+  env -u CARGO_REGISTRIES_SELFHOST_TOKEN cargo run
+else
+  cargo run
+fi
 cargo yank smoke-top --version 0.1.0 --registry selfhost
 cargo yank smoke-top --version 0.1.0 --undo --registry selfhost
 # Restart to verify that the registry does not depend on memory state.
 kill "$pid"
 wait "$pid" 2>/dev/null || true
-"$work/registry" >> "$work/server.log" 2>&1 &
+"$work/registry" -config "$work/server.toml" >> "$work/server.log" 2>&1 &
 pid=$!
 for _ in {1..100}; do
   if curl -fsS "$PUBLIC_URL/healthz" > /dev/null 2>&1; then break; fi
@@ -113,4 +134,10 @@ process.stdin.on("end", () => {
   assert.equal(packages.find(p => p.name === "@selfhost/smoke").versions.length, 2);
   assert.equal(packages.find(p => p.name === "smoke-top").versions[0].yanked, false);
 });'
-echo 'Cargo and npm publish/install, duplicate rejection, yank/undo, restart, and web catalog passed.'
+curl -fsS -H 'Authorization: Bearer second-smoke-test-token' "$PUBLIC_URL/npm/-/whoami" | grep -q '"username":"second-user"'
+if [[ "$private" == false ]]; then
+  curl -fsS "$PUBLIC_URL/api/packages" > /dev/null
+  status=$(curl -sS -o /dev/null -w '%{http_code}' -X DELETE "$PUBLIC_URL/cargo/api/v1/crates/smoke-top/0.1.0/yank")
+  [[ "$status" == 401 ]]
+fi
+echo "Cargo/npm publish/install, users, duplicate rejection, yank/undo, restart, and web catalog passed; private=$private."
