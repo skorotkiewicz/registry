@@ -439,7 +439,7 @@ func (s *registry) npm(w http.ResponseWriter, r *http.Request) error {
 			fail(w, 409, "version already published")
 			return nil
 		}
-		attachment, exists := incoming.Attachments[npmFilename(name, version)]
+		attachment, exists := incoming.Attachments[name+"-"+version+".tgz"]
 		archive, err := base64.StdEncoding.Strict().DecodeString(attachment.Data)
 		if !exists || err != nil || len(archive) == 0 || attachment.Length != len(archive) {
 			fail(w, 400, "invalid npm tarball")
