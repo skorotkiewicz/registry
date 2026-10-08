@@ -1,5 +1,5 @@
 # Copy to config.local.toml, set your tokens, then run:
-# ./registry -config config.local.toml
+# ./crateyard -config config.local.toml
 listen_addr = "127.0.0.1:8080"
 public_url = "http://localhost:8080"
 data_dir = "data"

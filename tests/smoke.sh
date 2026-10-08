@@ -31,9 +31,9 @@ index = "sparse+$PUBLIC_URL/cargo/"
 credential-provider = "cargo:token"
 EOF
 cd "$root"
-go build -ldflags="-X main.version=$(cat VERSION)" -o "$work/registry" ./cmd/registry
-[[ "$("$work/registry" --version)" == "registry $(cat VERSION)" ]]
-"$work/registry" -config "$work/server.toml" > "$work/server.log" 2>&1 &
+go build -ldflags="-X main.version=$(cat VERSION)" -o "$work/crateyard" ./cmd/crateyard
+[[ "$("$work/crateyard" --version)" == "crateyard $(cat VERSION)" ]]
+"$work/crateyard" -config "$work/server.toml" > "$work/server.log" 2>&1 &
 pid=$!
 trap 'kill "$pid" 2>/dev/null || true; printf "Test files: %s\n" "$work"' EXIT
 ready=false
@@ -119,7 +119,7 @@ cargo yank smoke-top --version 0.1.0 --undo --registry selfhost
 # Restart to verify that the registry does not depend on memory state.
 kill "$pid"
 wait "$pid" 2>/dev/null || true
-"$work/registry" -config "$work/server.toml" >> "$work/server.log" 2>&1 &
+"$work/crateyard" -config "$work/server.toml" >> "$work/server.log" 2>&1 &
 pid=$!
 for _ in {1..100}; do
   if curl -fsS "$PUBLIC_URL/healthz" > /dev/null 2>&1; then break; fi
@@ -127,7 +127,7 @@ for _ in {1..100}; do
 done
 npm view @selfhost/smoke version | grep -Fx '1.0.0'
 curl -fsS -H "Authorization: $REGISTRY_TOKEN" "$PUBLIC_URL/cargo/sm/ok/smoke-top" | grep -q '"vers":"0.1.0"'
-curl -fsS "$PUBLIC_URL/" | grep -q 'Your packages.'
+curl -fsS "$PUBLIC_URL/" | grep -q '<h1>Crateyard</h1>'
 curl -fsS -H "Authorization: Bearer $REGISTRY_TOKEN" "$PUBLIC_URL/api/packages" | node -e '
 let body = "";
 process.stdin.on("data", chunk => body += chunk);

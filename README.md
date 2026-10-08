@@ -1,14 +1,14 @@
-# Crate and npm registry
+# Crateyard
 
-A small self-hosted registry for Rust crates and npm packages, with a web browser for your packages. Use normal `cargo publish`, `npm publish`, and dependency installs. Written in Go with one TOML parsing dependency. Package metadata and archives live on disk.
+Crateyard is a small self-hosted registry for Rust crates and npm packages, with a web browser for your packages. Use normal `cargo publish`, `npm publish`, and dependency installs. Written in Go with one TOML parsing dependency. Package metadata and archives live on disk.
 
 Each configured user has a nickname and their own token. By default the registry is private, so reading packages requires a token too. Set `private = false` for anonymous browsing and downloads. Publishing and yanking always require a user token. All users have the same permissions, with no per-package ownership rules, so only give tokens to trusted publishers.
 
 ## Project layout
 
 ```text
-cmd/registry/       Go application and its *_test.go unit tests
-cmd/registry/web/   HTML, CSS, and JavaScript embedded in the binary
+cmd/crateyard/       Go application and its *_test.go unit tests
+cmd/crateyard/web/   HTML, CSS, and JavaScript embedded in the binary
 tests/smoke.sh      Cargo/npm integration test
 config.toml        Server configuration template
 ```
@@ -28,11 +28,11 @@ openssl rand -hex 32
 Put the generated token in your user's `token` field in `config.local.toml`, then start the server:
 
 ```sh
-go build -ldflags="-X main.version=$(cat VERSION)" -o registry ./cmd/registry
-./registry -config config.local.toml
+go build -ldflags="-X main.version=$(cat VERSION)" -o crateyard ./cmd/crateyard
+./crateyard -config config.local.toml
 ```
 
-`VERSION` contains the application version. Builds made with `just build`, Docker, or the release workflow include it in the binary. Check it with `registry --version`; the version command does not need a config file.
+`VERSION` contains the application version. Builds made with `just build`, Docker, or the release workflow include it in the binary. Check it with `crateyard --version`; the version command does not need a config file.
 
 Without `-config`, the server reads `config.toml` from the working directory. The supplied file lists every setting and has an empty token so it cannot accidentally start with a shared example secret. `config.local.toml` is gitignored. Keep configured tokens out of Git.
 
@@ -78,16 +78,16 @@ For another machine, set `public_url` to its actual URL. For example, `https://p
 In `config.local.toml`, set `listen_addr = "0.0.0.0:8080"` and `data_dir = "/data"`. Set `public_url` to the address your clients use. The config is mounted separately and is not included in the image.
 
 ```sh
-docker build -t own-registry .
+docker build -t crateyard .
 chgrp "$(id -g)" config.local.toml
 chmod 640 config.local.toml
-docker run -d --name own-registry \
+docker run -d --name crateyard \
   -p 127.0.0.1:8080:8080 \
   --group-add "$(id -g)" \
   -v "$PWD/config.local.toml:/config.toml:ro" \
-  -v own-registry-data:/data \
+  -v crateyard-data:/data \
   --restart unless-stopped \
-  own-registry
+  crateyard
 ```
 
 The supplementary group lets the container read the config without making it world-readable. A named volume keeps packages across container restarts. If you use a bind mount for data instead, its directory must be writable by the container. Keep `public_url` consistent with the address used by clients, including its scheme and port.

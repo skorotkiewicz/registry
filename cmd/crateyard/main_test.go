@@ -133,18 +133,18 @@ func TestRegistry(t *testing.T) {
 }
 
 func TestVersionFlag(t *testing.T) {
-	if os.Getenv("REGISTRY_TEST_VERSION") == "1" {
-		flag.CommandLine = flag.NewFlagSet("registry", flag.ExitOnError)
-		os.Args = []string{"registry", "--version", "--config", "missing.toml"}
+	if os.Getenv("CRATEYARD_TEST_VERSION") == "1" {
+		flag.CommandLine = flag.NewFlagSet("crateyard", flag.ExitOnError)
+		os.Args = []string{"crateyard", "--version", "--config", "missing.toml"}
 		version = "1.2.3"
 		main()
 		os.Exit(0)
 	}
 	cmd := exec.Command(os.Args[0], "-test.run=^TestVersionFlag$")
-	cmd.Env = append(os.Environ(), "REGISTRY_TEST_VERSION=1")
+	cmd.Env = append(os.Environ(), "CRATEYARD_TEST_VERSION=1")
 	cmd.Dir = t.TempDir()
 	output, err := cmd.CombinedOutput()
-	if err != nil || string(output) != "registry 1.2.3\n" {
+	if err != nil || string(output) != "crateyard 1.2.3\n" {
 		t.Fatalf("version flag failed: %v, %s", err, output)
 	}
 }

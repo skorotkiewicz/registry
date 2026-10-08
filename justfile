@@ -7,10 +7,10 @@ default:
     @just --list
 
 build:
-    go build -ldflags="-X main.version={{ version }}" -o registry ./cmd/registry
+    go build -ldflags="-X main.version={{ version }}" -o crateyard ./cmd/crateyard
 
 run *args:
-    go run -ldflags="-X main.version={{ version }}" ./cmd/registry {{ args }}
+    go run -ldflags="-X main.version={{ version }}" ./cmd/crateyard {{ args }}
 
 fmt:
     go fmt ./...

@@ -45,27 +45,48 @@ jobs:
       - name: Build and package
         shell: bash
         run: |
-          name="registry-${GOOS}-${GOARCH}"
+          name="crateyard-${GOOS}-${GOARCH}"
           extension=""
           if [[ "$GOOS" == windows ]]; then extension=".exe"; fi
           mkdir -p "dist/$name"
-          go build -trimpath -ldflags="-s -w -X main.version=$(cat VERSION)" -o "dist/$name/registry$extension" ./cmd/registry
+          go build -trimpath -ldflags="-s -w -X main.version=$(cat VERSION)" -o "dist/$name/crateyard$extension" ./cmd/crateyard
+          cp config.toml README.md LICENSE "dist/$name/"
           if [[ "$GOOS" == windows ]]; then
-            (cd "dist/$name" && zip "../$name.zip" registry.exe)
+            (cd "dist/$name" && zip "../$name.zip" crateyard.exe config.toml README.md LICENSE)
           else
-            tar -czf "dist/$name.tar.gz" -C "dist/$name" registry
+            tar -czf "dist/$name.tar.gz" -C "dist/$name" crateyard config.toml README.md LICENSE
           fi
       - uses: actions/upload-artifact@v4
         with:
-          name: registry-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: crateyard-${{ matrix.goos }}-${{ matrix.goarch }}
           path: |
             dist/*.tar.gz
             dist/*.zip
           if-no-files-found: error
 
+  release:
+    name: Release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          pattern: crateyard-*
+          merge-multiple: true
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+
 #   aur-publish:
 #     name: Publish to AUR
-#     needs: build
+#     needs: release
 #     if: startsWith(github.ref, 'refs/tags/v')
 #     runs-on: ubuntu-latest
 #     container:
@@ -107,7 +128,7 @@ jobs:
 #       - name: Publish AUR package
 #         uses: KSXGitHub/github-actions-deploy-aur@v4.1.2
 #         with:
-#           pkgname: crate-npm-registry
+#           pkgname: crateyard-bin
 #           pkgbuild: ./.github/arch/PKGBUILD
 #           assets: ./.github/arch/.SRCINFO
 #           commit_username: ${{ secrets.AUR_USERNAME }}

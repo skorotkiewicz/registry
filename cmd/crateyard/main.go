@@ -62,7 +62,7 @@ func main() {
 	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
 	if *showVersion {
-		fmt.Println("registry", version)
+		fmt.Println("crateyard", version)
 		return
 	}
 	c, err := loadConfig(*path)
@@ -74,7 +74,7 @@ func main() {
 		log.Fatal(err)
 	}
 	s := &http.Server{Addr: c.ListenAddr, Handler: r, ReadHeaderTimeout: c.ReadHeaderTimeout, ReadTimeout: c.ReadTimeout, WriteTimeout: c.WriteTimeout, IdleTimeout: c.IdleTimeout, MaxHeaderBytes: c.MaxHeaderBytes}
-	log.Printf("registry listening on %s, public URL %s, private=%t", s.Addr, r.base, r.private)
+	log.Printf("crateyard listening on %s, public URL %s, private=%t", s.Addr, r.base, r.private)
 	log.Fatal(s.ListenAndServe())
 }
 

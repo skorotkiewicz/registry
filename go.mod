@@ -1,4 +1,4 @@
-module crate-npm-repo-server
+module crateyard
 
 go 1.23
 
