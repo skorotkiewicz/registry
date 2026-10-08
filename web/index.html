@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Package registry</title>
+  <link rel="stylesheet" href="/web/style.css">
+  <script src="/web/app.js" defer></script>
+</head>
+<body>
+  <main>
+    <header>
+      <p class="eyebrow">Self-hosted registry</p>
+      <h1>Your packages.</h1>
+      <p>One place for your npm packages and Rust crates.</p>
+    </header>
+    <section id="login" aria-labelledby="login-title">
+      <h2 id="login-title">Open the registry</h2>
+      <form id="login-form">
+        <label for="token">Registry token</label>
+        <div class="token-row">
+          <input id="token" type="password" required autocomplete="off" spellcheck="false" placeholder="Paste your token">
+          <button type="submit">Connect</button>
+        </div>
+      </form>
+      <p class="muted">Your token stays in this page's memory. Reload or disconnect to clear it.</p>
+    </section>
+    <p id="status" role="status" aria-live="polite"></p>
+    <section id="browser" hidden aria-label="Package browser">
+      <div class="toolbar">
+        <div class="search-field">
+          <label for="search">Find a package</label>
+          <input id="search" type="search" placeholder="Search by name" autocomplete="off">
+        </div>
+        <div>
+          <label for="kind">Package type</label>
+          <select id="kind">
+            <option value="all">All packages</option>
+            <option value="npm">npm</option>
+            <option value="cargo">Rust crates</option>
+          </select>
+        </div>
+        <button id="refresh" type="button" class="secondary">Refresh</button>
+        <button id="disconnect" type="button" class="secondary">Disconnect</button>
+      </div>
+      <details class="setup">
+        <summary>Configure your clients</summary>
+        <p>Add this to <code>~/.cargo/config.toml</code>, then set <code>CARGO_REGISTRIES_SELFHOST_TOKEN</code> to your registry token.</p>
+        <pre id="cargo-config"></pre>
+        <p>Add this to your project's <code>.npmrc</code> and set <code>REGISTRY_TOKEN</code> in your shell. Replace <code>@selfhost</code> with your package scope.</p>
+        <pre id="npm-config"></pre>
+        <p>Publish with <code>cargo publish --registry selfhost</code> or <code id="npm-publish"></code>.</p>
+      </details>
+      <p id="count" class="muted" aria-live="polite"></p>
+      <div id="packages" class="packages"></div>
+    </section>
+    <noscript><p>This package browser needs JavaScript. Cargo and npm work without it.</p></noscript>
+    <footer>Packages stay on your server. Publish from Cargo or npm.</footer>
+  </main>
+</body>
+</html>

@@ -90,6 +90,9 @@ func fail(w http.ResponseWriter, status int, message string) {
 func (s *registry) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Content-Type-Options", "nosniff")
 	w.Header().Set("Cache-Control", "no-store")
+	if (r.Method == "GET" || r.Method == "HEAD") && serveWeb(w, r) {
+		return
+	}
 	if r.Method == "GET" && r.URL.Path == "/healthz" {
 		reply(w, 200, map[string]bool{"ok": true})
 		return
@@ -110,6 +113,8 @@ func (s *registry) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.Body = http.MaxBytesReader(w, r.Body, maxUpload)
 	var err error
 	switch {
+	case r.URL.Path == "/api/packages" && r.Method == "GET":
+		err = s.catalog(w)
 	case strings.HasPrefix(r.URL.Path, "/cargo/"):
 		err = s.cargo(w, r)
 	case strings.HasPrefix(r.URL.Path, "/npm/"):
