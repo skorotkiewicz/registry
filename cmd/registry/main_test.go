@@ -42,7 +42,7 @@ func TestRegistry(t *testing.T) {
 	check(request("PUT", "/cargo/api/v1/crates/new", []byte{255, 255, 255, 255}, testToken), 400)
 	check(request("PUT", "/npm/../escape", []byte(`{}`), "Bearer "+testToken), 400)
 
-	archive := []byte("test archive bytes, clients check real archives in smoke.sh")
+	archive := []byte("test archive bytes, clients check real archives in tests/smoke.sh")
 	publish := func(name, version string) *httptest.ResponseRecorder {
 		t.Helper()
 		meta := []byte(`{"name":"` + name + `","vers":"` + version + `","deps":[{"name":"other","version_req":"^1","explicit_name_in_toml":"alias"}],"features":{"optional":["dep:alias"]}}`)

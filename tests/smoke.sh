@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-root=$(cd "$(dirname "$0")" && pwd)
+root=$(cd "$(dirname "$0")/.." && pwd)
 work=$(mktemp -d)
 port=${SMOKE_PORT:-18080}
 export REGISTRY_TOKEN=smoke-test-token-not-for-production
@@ -31,7 +31,7 @@ index = "sparse+$PUBLIC_URL/cargo/"
 credential-provider = "cargo:token"
 EOF
 cd "$root"
-go build -o "$work/registry" .
+go build -o "$work/registry" ./cmd/registry
 "$work/registry" -config "$work/server.toml" > "$work/server.log" 2>&1 &
 pid=$!
 trap 'kill "$pid" 2>/dev/null || true; printf "Test files: %s\n" "$work"' EXIT

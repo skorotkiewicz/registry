@@ -2,9 +2,8 @@ FROM golang:1.25-alpine AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
-COPY main.go web.go config.go ./
-COPY web ./web
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /registry . && mkdir /data
+COPY cmd/registry ./cmd/registry
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /registry ./cmd/registry && mkdir /data
 
 FROM scratch
 COPY --from=build /registry /registry

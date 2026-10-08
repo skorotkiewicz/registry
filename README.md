@@ -4,6 +4,17 @@ A small self-hosted registry for Rust crates and npm packages, with a web browse
 
 Each configured user has a nickname and their own token. By default the registry is private, so reading packages requires a token too. Set `private = false` for anonymous browsing and downloads. Publishing and yanking always require a user token. All users have the same permissions, with no per-package ownership rules, so only give tokens to trusted publishers.
 
+## Project layout
+
+```text
+cmd/registry/       Go application and its *_test.go unit tests
+cmd/registry/web/   HTML, CSS, and JavaScript embedded in the binary
+tests/smoke.sh      Cargo/npm integration test
+config.toml        Server configuration template
+```
+
+Module files, configuration, and deployment files stay at the repository root. Run the following build commands from there.
+
 ## Run
 
 Requires Go 1.23 or newer to build. The compiled server needs no Go installation.
@@ -17,7 +28,7 @@ openssl rand -hex 32
 Put the generated token in your user's `token` field in `config.local.toml`, then start the server:
 
 ```sh
-go build -o registry .
+go build -o registry ./cmd/registry
 ./registry -config config.local.toml
 ```
 
@@ -176,8 +187,8 @@ npm package names remain global and client URLs do not change. This folder group
 ```sh
 go test -race ./...
 go vet ./...
-bash smoke.sh
-SMOKE_PRIVATE=false bash smoke.sh
+bash tests/smoke.sh
+SMOKE_PRIVATE=false bash tests/smoke.sh
 ```
 
 The smoke test requires Go, Cargo, npm, Node, curl, and Bash. It starts a localhost server, publishes and consumes real packages, checks per-user identity, npm publisher directories, duplicate rejection, and Cargo yank/undo, then restarts the server to check persistence and the web package catalog. The public-mode run also installs packages without tokens and checks that anonymous writes remain blocked. Test files stay in the printed temporary directory. Set `SMOKE_PORT` if port 18080 is occupied.

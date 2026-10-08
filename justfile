@@ -5,10 +5,10 @@ default:
     @just --list
 
 build:
-    go build -o registry .
+    go build -o registry ./cmd/registry
 
 run *args:
-    go run . {{ args }}
+    go run ./cmd/registry {{ args }}
 
 fmt:
     go fmt ./...
