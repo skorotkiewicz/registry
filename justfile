@@ -7,8 +7,6 @@ default:
 build:
     go build -o registry .
 
-build-all: build
-
 run *args:
     go run . {{ args }}
 
