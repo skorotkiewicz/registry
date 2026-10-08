@@ -1,0 +1,58 @@
+name: Build
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - run: go vet ./...
+      - run: go test -race ./...
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+    env:
+      CGO_ENABLED: '0'
+      GOOS: ${{ matrix.goos }}
+      GOARCH: ${{ matrix.goarch }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - name: Build and package
+        shell: bash
+        run: |
+          name="registry-${GOOS}-${GOARCH}"
+          extension=""
+          if [[ "$GOOS" == windows ]]; then extension=".exe"; fi
+          mkdir -p "dist/$name"
+          go build -trimpath -ldflags="-s -w" -o "dist/$name/registry$extension" ./cmd/registry
+          if [[ "$GOOS" == windows ]]; then
+            (cd "dist/$name" && zip "../$name.zip" registry.exe)
+          else
+            tar -czf "dist/$name.tar.gz" -C "dist/$name" registry
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: registry-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            dist/*.tar.gz
+            dist/*.zip
+          if-no-files-found: error
