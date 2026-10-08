@@ -35,14 +35,14 @@ func serveWeb(w http.ResponseWriter, r *http.Request) bool {
 }
 
 type packageVersion struct {
-	Version string `json:"version"`
-	Yanked  bool `json:"yanked"`
+	Version string   `json:"version"`
+	Yanked  bool     `json:"yanked"`
 	Tags    []string `json:"tags"`
 }
 
 type packageSummary struct {
-	Kind     string `json:"kind"`
-	Name     string `json:"name"`
+	Kind     string           `json:"kind"`
+	Name     string           `json:"name"`
 	Versions []packageVersion `json:"versions"`
 }
 
@@ -66,7 +66,9 @@ func (s *registry) catalog(w http.ResponseWriter) error {
 			if kind == "cargo" {
 				var pkg cratePackage
 				if err := load(path, &pkg); err != nil {
-					if errors.Is(err, os.ErrNotExist) { continue }
+					if errors.Is(err, os.ErrNotExist) {
+						continue
+					}
 					return err
 				}
 				p.Name = pkg.Name
@@ -78,14 +80,18 @@ func (s *registry) catalog(w http.ResponseWriter) error {
 			} else {
 				var pkg npmPackage
 				if err := load(path, &pkg); err != nil {
-					if errors.Is(err, os.ErrNotExist) { continue }
+					if errors.Is(err, os.ErrNotExist) {
+						continue
+					}
 					return err
 				}
 				p.Name = pkg.Name
 				for version := range pkg.Versions {
 					v := packageVersion{Version: version, Tags: []string{}}
 					for tag, target := range pkg.Tags {
-						if target == version { v.Tags = append(v.Tags, tag) }
+						if target == version {
+							v.Tags = append(v.Tags, tag)
+						}
 					}
 					sort.Strings(v.Tags)
 					p.Versions = append(p.Versions, v)
@@ -96,7 +102,9 @@ func (s *registry) catalog(w http.ResponseWriter) error {
 		}
 	}
 	sort.Slice(packages, func(i, j int) bool {
-		if packages[i].Kind != packages[j].Kind { return packages[i].Kind < packages[j].Kind }
+		if packages[i].Kind != packages[j].Kind {
+			return packages[i].Kind < packages[j].Kind
+		}
 		return packages[i].Name < packages[j].Name
 	})
 	reply(w, 200, map[string]any{"url": s.base, "packages": packages})

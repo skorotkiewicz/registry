@@ -102,4 +102,15 @@ for _ in {1..100}; do
 done
 npm view @selfhost/smoke version | grep -Fx '1.0.0'
 curl -fsS -H "Authorization: $REGISTRY_TOKEN" "$PUBLIC_URL/cargo/sm/ok/smoke-top" | grep -q '"vers":"0.1.0"'
-echo 'Cargo and npm publish/install, duplicate rejection, yank/undo, and restart passed.'
+curl -fsS "$PUBLIC_URL/" | grep -q 'Your packages.'
+curl -fsS -H "Authorization: Bearer $REGISTRY_TOKEN" "$PUBLIC_URL/api/packages" | node -e '
+let body = "";
+process.stdin.on("data", chunk => body += chunk);
+process.stdin.on("end", () => {
+  const assert = require("node:assert/strict");
+  const { packages } = JSON.parse(body);
+  assert.equal(packages.length, 3);
+  assert.equal(packages.find(p => p.name === "@selfhost/smoke").versions.length, 2);
+  assert.equal(packages.find(p => p.name === "smoke-top").versions[0].yanked, false);
+});'
+echo 'Cargo and npm publish/install, duplicate rejection, yank/undo, restart, and web catalog passed.'
