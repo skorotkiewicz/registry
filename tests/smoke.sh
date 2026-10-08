@@ -31,7 +31,8 @@ index = "sparse+$PUBLIC_URL/cargo/"
 credential-provider = "cargo:token"
 EOF
 cd "$root"
-go build -o "$work/registry" ./cmd/registry
+go build -ldflags="-X main.version=$(cat VERSION)" -o "$work/registry" ./cmd/registry
+[[ "$("$work/registry" --version)" == "registry $(cat VERSION)" ]]
 "$work/registry" -config "$work/server.toml" > "$work/server.log" 2>&1 &
 pid=$!
 trap 'kill "$pid" 2>/dev/null || true; printf "Test files: %s\n" "$work"' EXIT

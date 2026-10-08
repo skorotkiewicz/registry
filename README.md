@@ -28,9 +28,11 @@ openssl rand -hex 32
 Put the generated token in your user's `token` field in `config.local.toml`, then start the server:
 
 ```sh
-go build -o registry ./cmd/registry
+go build -ldflags="-X main.version=$(cat VERSION)" -o registry ./cmd/registry
 ./registry -config config.local.toml
 ```
+
+`VERSION` contains the application version. Builds made with `just build`, Docker, or the release workflow include it in the binary. Check it with `registry --version`; the version command does not need a config file.
 
 Without `-config`, the server reads `config.toml` from the working directory. The supplied file lists every setting and has an empty token so it cannot accidentally start with a shared example secret. `config.local.toml` is gitignored. Keep configured tokens out of Git.
 

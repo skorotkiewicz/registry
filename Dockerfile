@@ -3,7 +3,8 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY cmd/registry ./cmd/registry
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /registry ./cmd/registry && mkdir /data
+COPY VERSION ./
+RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w -X main.version=$(cat VERSION)" -o /registry ./cmd/registry && mkdir /data
 
 FROM scratch
 COPY --from=build /registry /registry

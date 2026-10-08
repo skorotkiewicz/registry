@@ -1,14 +1,16 @@
 # https://github.com/casey/just
 
+version := `cat VERSION`
+
 [private]
 default:
     @just --list
 
 build:
-    go build -o registry ./cmd/registry
+    go build -ldflags="-X main.version={{ version }}" -o registry ./cmd/registry
 
 run *args:
-    go run ./cmd/registry {{ args }}
+    go run -ldflags="-X main.version={{ version }}" ./cmd/registry {{ args }}
 
 fmt:
     go fmt ./...
@@ -28,11 +30,12 @@ install-hook:
 remove-hook:
     @rm .git/hooks/pre-commit
 
-# `just add-tag 0.1.0`
-add-tag VERSION:
+# `just add-tag` uses the version from VERSION.
+add-tag:
     #!/usr/bin/env bash
     set -euo pipefail
-    VERSION="{{ VERSION }}"
+    VERSION="{{ version }}"
+
     git push origin main
     git tag -a "v${VERSION}" -m "Release v${VERSION}"
     git push origin "v${VERSION}"

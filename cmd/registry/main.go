@@ -26,6 +26,8 @@ import (
 
 const maxUpload = 64 << 20
 
+var version = "dev"
+
 var (
 	crateName = regexp.MustCompile(`^[a-z][a-z0-9_-]{0,63}$`)
 	npmName   = regexp.MustCompile(`^(?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$`)
@@ -57,7 +59,12 @@ type cratePackage struct {
 
 func main() {
 	path := flag.String("config", "config.toml", "path to server TOML configuration")
+	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
+	if *showVersion {
+		fmt.Println("registry", version)
+		return
+	}
 	c, err := loadConfig(*path)
 	if err != nil {
 		log.Fatal(err)

@@ -5,8 +5,10 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
+	"flag"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -128,6 +130,23 @@ func TestRegistry(t *testing.T) {
 		t.Fatal(err)
 	}
 	check(request("GET", "/npm/broken", nil, "Bearer "+testToken), 500)
+}
+
+func TestVersionFlag(t *testing.T) {
+	if os.Getenv("REGISTRY_TEST_VERSION") == "1" {
+		flag.CommandLine = flag.NewFlagSet("registry", flag.ExitOnError)
+		os.Args = []string{"registry", "--version", "--config", "missing.toml"}
+		version = "1.2.3"
+		main()
+		os.Exit(0)
+	}
+	cmd := exec.Command(os.Args[0], "-test.run=^TestVersionFlag$")
+	cmd.Env = append(os.Environ(), "REGISTRY_TEST_VERSION=1")
+	cmd.Dir = t.TempDir()
+	output, err := cmd.CombinedOutput()
+	if err != nil || string(output) != "registry 1.2.3\n" {
+		t.Fatalf("version flag failed: %v, %s", err, output)
+	}
 }
 
 func TestVersionValidation(t *testing.T) {
