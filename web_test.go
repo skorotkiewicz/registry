@@ -51,7 +51,11 @@ func TestWeb(t *testing.T) {
 	if err := save(s.path("cargo", "example-crate", "metadata.json"), cratePackage{Name: "example-crate", Versions: []map[string]any{{"vers": "1.0.0", "yanked": true}, {"vers": "2.0.0", "yanked": false}}}); err != nil {
 		t.Fatal(err)
 	}
-	if err := save(s.path("npm", "@my/example", "metadata.json"), npmPackage{Name: "@my/example", Versions: map[string]map[string]any{"1.0.0": {"secret-extra": "not-for-catalog"}, "2.0.0-beta.1": {}}, Tags: map[string]string{"latest": "1.0.0", "beta": "2.0.0-beta.1"}}); err != nil {
+	dir, err := s.npmDir("@my/example", "tester")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := save(filepath.Join(dir, "metadata.json"), npmPackage{Name: "@my/example", Versions: map[string]map[string]any{"1.0.0": {"secret-extra": "not-for-catalog"}, "2.0.0-beta.1": {}}, Tags: map[string]string{"latest": "1.0.0", "beta": "2.0.0-beta.1"}}); err != nil {
 		t.Fatal(err)
 	}
 	w = request("GET", "/api/packages", testToken, 200)

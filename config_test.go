@@ -84,10 +84,14 @@ func TestAccessModes(t *testing.T) {
 			if err := atomicWrite(s.path("cargo", "example", "1.0.0.crate"), []byte("archive")); err != nil {
 				t.Fatal(err)
 			}
-			if err := save(s.path("npm", "@my/example", "metadata.json"), npmPackage{Name: "@my/example", Versions: map[string]map[string]any{"1.0.0": {}}, Tags: map[string]string{"latest": "1.0.0"}}); err != nil {
+			dir, err := s.npmDir("@my/example", "alice")
+			if err != nil {
 				t.Fatal(err)
 			}
-			if err := atomicWrite(s.path("npm", "@my/example", "1.0.0.tgz"), []byte("archive")); err != nil {
+			if err := save(filepath.Join(dir, "metadata.json"), npmPackage{Name: "@my/example", Versions: map[string]map[string]any{"1.0.0": {}}, Tags: map[string]string{"latest": "1.0.0"}}); err != nil {
+				t.Fatal(err)
+			}
+			if err := atomicWrite(filepath.Join(dir, "1.0.0.tgz"), []byte("archive")); err != nil {
 				t.Fatal(err)
 			}
 			request := func(method, path, token string, body []byte, want int) *httptest.ResponseRecorder {

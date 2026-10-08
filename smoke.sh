@@ -51,6 +51,9 @@ npm publish --ignore-scripts
 if npm publish --ignore-scripts > "$work/npm-duplicate.log" 2>&1; then echo 'duplicate npm version accepted'; exit 1; fi
 node -e 'let p=require("./package.json");p.version="2.0.0-beta.1";require("node:fs").writeFileSync("package.json",JSON.stringify(p))'
 npm publish --tag beta --ignore-scripts
+[[ -f "$work/data/npm/smokepublisher/@selfhost%2Fsmoke/metadata.json" ]]
+[[ -f "$work/data/npm/smokepublisher/@selfhost%2Fsmoke/1.0.0.tgz" ]]
+[[ ! -e "$work/data/npm/@selfhost%2Fsmoke" ]]
 cd "$work/npm-consumer"
 printf '{"name":"consumer","version":"1.0.0","private":true}\n' > package.json
 if [[ "$private" == false ]]; then

@@ -160,6 +160,10 @@ Replace both URLs in `.npmrc` when using another host. For HTTPS, the auth key s
 
 ## Storage and limits
 
+npm packages are stored in `data/npm/<userName>/<packageName>/`, using the first publisher's configured `nick`. Metadata and all version archives stay in that directory, even when another user publishes an update. Special characters in directory names are URL-escaped, so `@scope/example` becomes `@scope%2Fexample` on disk. The configured `data_dir` replaces `data` in these paths.
+
+npm package names remain global and client URLs do not change. This folder grouping does not add ownership restrictions. Removing a user does not remove their packages. Cargo storage is unchanged.
+
 - Published versions cannot be overwritten. Cargo yank changes availability without deleting the archive.
 - Uploads commit the archive first and then atomically replace metadata. An interrupted publish can leave an unused archive or temporary file, but not a partial committed archive.
 - Run exactly one server process per data directory. Requests share one lock. This is intended for small team registries, not high-throughput hosting.
@@ -176,4 +180,4 @@ bash smoke.sh
 SMOKE_PRIVATE=false bash smoke.sh
 ```
 
-The smoke test requires Go, Cargo, npm, Node, curl, and Bash. It starts a localhost server, publishes and consumes real packages, checks per-user identity, duplicate rejection, and Cargo yank/undo, then restarts the server to check persistence and the web package catalog. The public-mode run also installs packages without tokens and checks that anonymous writes remain blocked. Test files stay in the printed temporary directory. Set `SMOKE_PORT` if port 18080 is occupied.
+The smoke test requires Go, Cargo, npm, Node, curl, and Bash. It starts a localhost server, publishes and consumes real packages, checks per-user identity, npm publisher directories, duplicate rejection, and Cargo yank/undo, then restarts the server to check persistence and the web package catalog. The public-mode run also installs packages without tokens and checks that anonymous writes remain blocked. Test files stay in the printed temporary directory. Set `SMOKE_PORT` if port 18080 is occupied.

@@ -3,9 +3,9 @@ package main
 import (
 	"embed"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
-	"path/filepath"
 	"sort"
 )
 
@@ -48,20 +48,14 @@ type packageSummary struct {
 
 func (s *registry) catalog(w http.ResponseWriter) error {
 	packages := []packageSummary{}
+	seen := map[string]bool{}
 	// ponytail: scan metadata on each refresh; paginate and cache if the registry outgrows a small team.
 	for _, kind := range []string{"cargo", "npm"} {
-		dirs, err := os.ReadDir(filepath.Join(s.data, kind))
-		if errors.Is(err, os.ErrNotExist) {
-			continue
-		}
+		paths, err := s.metadataPaths(kind)
 		if err != nil {
 			return err
 		}
-		for _, dir := range dirs {
-			if !dir.IsDir() {
-				continue
-			}
-			path := filepath.Join(s.data, kind, dir.Name(), "metadata.json")
+		for _, path := range paths {
 			p := packageSummary{Kind: kind, Versions: []packageVersion{}}
 			if kind == "cargo" {
 				var pkg cratePackage
@@ -97,6 +91,11 @@ func (s *registry) catalog(w http.ResponseWriter) error {
 					p.Versions = append(p.Versions, v)
 				}
 			}
+			key := kind + "/" + p.Name
+			if seen[key] {
+				return fmt.Errorf("package %s exists in multiple directories", key)
+			}
+			seen[key] = true
 			sort.Slice(p.Versions, func(i, j int) bool { return p.Versions[i].Version < p.Versions[j].Version })
 			packages = append(packages, p)
 		}

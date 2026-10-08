@@ -149,6 +149,86 @@ func (s *registry) path(kind, name, file string) string {
 	return filepath.Join(s.data, kind, url.PathEscape(name), file)
 }
 
+func (s *registry) metadataPaths(kind string) ([]string, error) {
+	root := filepath.Join(s.data, kind)
+	dirs, err := os.ReadDir(root)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	paths := []string{}
+	add := func(dir string) error {
+		path := filepath.Join(dir, "metadata.json")
+		info, err := os.Stat(path)
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return nil
+			}
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		paths = append(paths, path)
+		return nil
+	}
+	for _, dir := range dirs {
+		if !dir.IsDir() {
+			continue
+		}
+		path := filepath.Join(root, dir.Name())
+		if kind != "npm" {
+			if err := add(path); err != nil {
+				return nil, err
+			}
+			continue
+		}
+		packages, err := os.ReadDir(path)
+		if err != nil {
+			return nil, err
+		}
+		for _, pkg := range packages {
+			if pkg.IsDir() {
+				if err := add(filepath.Join(path, pkg.Name())); err != nil {
+					return nil, err
+				}
+			}
+		}
+	}
+	return paths, nil
+}
+
+func (s *registry) npmDir(name, nick string) (string, error) {
+	// ponytail: scan directories to resolve global npm names; add a lookup index if the registry grows.
+	paths, err := s.metadataPaths("npm")
+	if err != nil {
+		return "", err
+	}
+	found := ""
+	for _, path := range paths {
+		if filepath.Base(filepath.Dir(path)) != url.PathEscape(name) {
+			continue
+		}
+		if found != "" {
+			return "", fmt.Errorf("npm package %s exists in multiple directories", name)
+		}
+		found = filepath.Dir(path)
+	}
+	if found != "" {
+		return found, nil
+	}
+	if nick == "" {
+		return "", os.ErrNotExist
+	}
+	owner := url.PathEscape(nick)
+	if owner == "." || owner == ".." {
+		owner = strings.ReplaceAll(owner, ".", "%2E")
+	}
+	return filepath.Join(s.data, "npm", owner, url.PathEscape(name)), nil
+}
+
 func load(path string, value any) error {
 	b, err := os.ReadFile(path)
 	if err != nil {
@@ -401,7 +481,15 @@ func (s *registry) npm(w http.ResponseWriter, r *http.Request) error {
 		fail(w, 400, "invalid npm package name")
 		return nil
 	}
-	path := s.path("npm", name, "metadata.json")
+	dir, err := s.npmDir(name, s.nickname(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")))
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			fail(w, 404, "package not found")
+			return nil
+		}
+		return err
+	}
+	path := filepath.Join(dir, "metadata.json")
 	pkg := npmPackage{Name: name, Versions: map[string]map[string]any{}, Tags: map[string]string{}}
 	if err := load(path, &pkg); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
@@ -412,7 +500,7 @@ func (s *registry) npm(w http.ResponseWriter, r *http.Request) error {
 	if file != "" && (r.Method == "GET" || r.Method == "HEAD") {
 		for version := range pkg.Versions {
 			if file == npmFilename(name, version) {
-				http.ServeFile(w, r, s.path("npm", name, version+".tgz"))
+				http.ServeFile(w, r, filepath.Join(dir, version+".tgz"))
 				return nil
 			}
 		}
@@ -472,7 +560,7 @@ func (s *registry) npm(w http.ResponseWriter, r *http.Request) error {
 		sha := sha1.Sum(archive)
 		integrity := sha512.Sum512(archive)
 		metadata["dist"] = map[string]string{"tarball": s.base + "/npm/" + url.PathEscape(name) + "/-/" + npmFilename(name, version), "shasum": hex.EncodeToString(sha[:]), "integrity": "sha512-" + base64.StdEncoding.EncodeToString(integrity[:])}
-		if err := atomicWrite(s.path("npm", name, version+".tgz"), archive); err != nil {
+		if err := atomicWrite(filepath.Join(dir, version+".tgz"), archive); err != nil {
 			return err
 		}
 		pkg.Versions[version] = metadata

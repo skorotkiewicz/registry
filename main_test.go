@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -116,10 +117,14 @@ func TestRegistry(t *testing.T) {
 	check(request("GET", "/npm/@mine%2fexample/-/../../metadata.json", nil, "Bearer "+testToken), 404)
 	check(request("GET", "/npm/missing", nil, "Bearer "+testToken), 404)
 	// Corrupt records must not be mistaken for a missing package and overwritten.
-	if err := os.MkdirAll(s.path("npm", "broken", ""), 0700); err != nil {
+	dir, err := s.npmDir("broken", "tester")
+	if err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(s.path("npm", "broken", "metadata.json"), []byte("{"), 0600); err != nil {
+	if err := os.MkdirAll(dir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "metadata.json"), []byte("{"), 0600); err != nil {
 		t.Fatal(err)
 	}
 	check(request("GET", "/npm/broken", nil, "Bearer "+testToken), 500)
