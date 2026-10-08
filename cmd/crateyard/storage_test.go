@@ -93,6 +93,15 @@ func TestNpmPublisherDirectories(t *testing.T) {
 			if err := json.Unmarshal(catalog.Body.Bytes(), &result); err != nil || len(result.Packages) != 3 {
 				t.Fatalf("catalog missed packages: %s", catalog.Body.String())
 			}
+			for _, pkg := range result.Packages {
+				want := "alice"
+				if pkg.Name == "shared" {
+					want = "bob"
+				}
+				if pkg.Publisher != want {
+					t.Fatalf("publisher changed after update or user removal: %s: %q", pkg.Name, pkg.Publisher)
+				}
+			}
 			// Special nicknames must not escape the npm directory or collapse into it.
 			for i, nick := range []string{".", "..", "../outside", "alice/admin"} {
 				dir, err := s.npmDir("safe-"+string(rune('a'+i)), nick)

@@ -110,9 +110,10 @@ The supplementary group lets the container read the config without making it wor
 
 Open `http://localhost:8080`. Private registries ask for your user token; public registries open the package list automatically. You can:
 
-- Browse npm packages and Rust crates, or filter by name and package type.
+- Browse a dark, cgit-style package index and filter by name, publisher, or package type.
+- See who first published each package. npm names come from the publisher directory; new Cargo crates record the authenticated nickname. Older Cargo records show `unknown`.
 - View published versions, npm tags, and yanked crate versions.
-- Get install commands and client configuration snippets.
+- Copy install commands and view client configuration snippets.
 
 Click Refresh after publishing. Disconnect clears the package list and token. The token stays only in the page's memory, not in cookies, URLs, or browser storage. Reloading the page also clears it.
 

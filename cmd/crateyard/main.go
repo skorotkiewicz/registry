@@ -53,8 +53,9 @@ type npmPackage struct {
 }
 
 type cratePackage struct {
-	Name     string           `json:"name"`
-	Versions []map[string]any `json:"versions"`
+	Name      string           `json:"name"`
+	Publisher string           `json:"publisher,omitempty"`
+	Versions  []map[string]any `json:"versions"`
 }
 
 func main() {
@@ -456,6 +457,9 @@ func (s *registry) publishCrate(w http.ResponseWriter, r *http.Request) error {
 	entry := map[string]any{"name": m.Name, "vers": m.Version, "deps": m.Deps, "cksum": hex.EncodeToString(hash[:]), "features": map[string]any{}, "features2": m.Features, "v": 2, "yanked": false, "links": m.Links, "rust_version": m.RustVersion}
 	if err := atomicWrite(s.path("cargo", m.Name, m.Version+".crate"), archive); err != nil {
 		return err
+	}
+	if len(pkg.Versions) == 0 {
+		pkg.Publisher = s.nickname(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "))
 	}
 	pkg.Versions = append(pkg.Versions, entry)
 	if err := save(path, pkg); err != nil {

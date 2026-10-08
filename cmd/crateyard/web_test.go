@@ -48,14 +48,14 @@ func TestWeb(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(s.data, "cargo", ".upload-leftover"), []byte("ignored"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	if err := save(s.path("cargo", "example-crate", "metadata.json"), cratePackage{Name: "example-crate", Versions: []map[string]any{{"vers": "1.0.0", "yanked": true}, {"vers": "2.0.0", "yanked": false}}}); err != nil {
+	if err := save(s.path("cargo", "example-crate", "metadata.json"), cratePackage{Name: "example-crate", Publisher: "crate-user", Versions: []map[string]any{{"vers": "1.0.0", "yanked": true}, {"vers": "2.0.0", "yanked": false}}}); err != nil {
 		t.Fatal(err)
 	}
-	dir, err := s.npmDir("@my/example", "tester")
+	dir, err := s.npmDir("@my/example", "tester/admin")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := save(filepath.Join(dir, "metadata.json"), npmPackage{Name: "@my/example", Versions: map[string]map[string]any{"1.0.0": {"secret-extra": "not-for-catalog"}, "2.0.0-beta.1": {}}, Tags: map[string]string{"latest": "1.0.0", "beta": "2.0.0-beta.1"}}); err != nil {
+	if err := save(filepath.Join(dir, "metadata.json"), npmPackage{Name: "@my/example", Versions: map[string]map[string]any{"1.0.0": {"secret-extra": "not-for-catalog", "publisher": "forged"}, "2.0.0-beta.1": {}}, Tags: map[string]string{"latest": "1.0.0", "beta": "2.0.0-beta.1"}}); err != nil {
 		t.Fatal(err)
 	}
 	w = request("GET", "/api/packages", testToken, 200)
@@ -70,10 +70,10 @@ func TestWeb(t *testing.T) {
 		t.Fatalf("bad catalog: %s", w.Body.String())
 	}
 	crate, npm := catalog.Packages[0], catalog.Packages[1]
-	if crate.Kind != "cargo" || crate.Name != "example-crate" || len(crate.Versions) != 2 || !crate.Versions[0].Yanked || crate.Versions[1].Yanked {
+	if crate.Kind != "cargo" || crate.Name != "example-crate" || crate.Publisher != "crate-user" || len(crate.Versions) != 2 || !crate.Versions[0].Yanked || crate.Versions[1].Yanked {
 		t.Fatalf("incorrect crate summary: %+v", crate)
 	}
-	if npm.Kind != "npm" || npm.Name != "@my/example" || len(npm.Versions) != 2 || strings.Join(npm.Versions[0].Tags, ",") != "latest" || strings.Join(npm.Versions[1].Tags, ",") != "beta" {
+	if npm.Kind != "npm" || npm.Name != "@my/example" || npm.Publisher != "tester/admin" || len(npm.Versions) != 2 || strings.Join(npm.Versions[0].Tags, ",") != "latest" || strings.Join(npm.Versions[1].Tags, ",") != "beta" {
 		t.Fatalf("incorrect npm summary: %+v", npm)
 	}
 	if err := os.WriteFile(s.path("cargo", "example-crate", "metadata.json"), []byte("{"), 0600); err != nil {

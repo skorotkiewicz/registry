@@ -135,6 +135,7 @@ process.stdin.on("end", () => {
   const assert = require("node:assert/strict");
   const { packages } = JSON.parse(body);
   assert.equal(packages.length, 3);
+  assert.ok(packages.every(p => p.publisher === "smokepublisher"));
   assert.equal(packages.find(p => p.name === "@selfhost/smoke").versions.length, 2);
   assert.equal(packages.find(p => p.name === "smoke-top").versions[0].yanked, false);
 });'

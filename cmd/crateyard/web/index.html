@@ -3,60 +3,82 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Crateyard</title>
+  <meta name="theme-color" content="#080808">
+  <title>Crateyard / package index</title>
   <link rel="stylesheet" href="/web/style.css">
   <script src="/web/app.js" defer></script>
 </head>
 <body>
-  <main>
-    <header>
-      <p class="eyebrow">Self-hosted registry</p>
-      <h1>Crateyard</h1>
-      <p>One place for your npm packages and Rust crates.</p>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <main id="main">
+    <header class="masthead">
+      <div class="identity">
+        <span class="mark" aria-hidden="true">[cy]</span>
+        <div><h1>Crateyard</h1><p>home sweet localhost</p></div>
+      </div>
+      <div class="server-info"><span>cargo / npm</span><span id="access">checking access...</span></div>
     </header>
+
     <section id="login" aria-labelledby="login-title">
-      <h2 id="login-title">Open Crateyard</h2>
+      <div class="section-heading"><h2 id="login-title">connect to the registry</h2><span class="muted">read-only web interface</span></div>
       <form id="login-form">
         <label for="token">Registry token</label>
         <div class="token-row">
-          <input id="token" type="password" required autocomplete="off" spellcheck="false" placeholder="Paste your token">
-          <button type="submit">Connect</button>
+          <input id="token" type="password" required autocomplete="off" spellcheck="false" placeholder="Paste your user token" aria-describedby="token-help">
+          <button type="submit">connect</button>
         </div>
       </form>
-      <button id="browse-public" type="button" class="secondary" hidden>Browse public packages</button>
-      <p class="muted">Your token stays in this page's memory. Reload or disconnect to clear it.</p>
+      <p id="token-help" class="muted">Token stays in memory. Reload or disconnect to forget it.</p>
+      <button id="browse-public" type="button" hidden>browse anonymously</button>
     </section>
+
     <p id="status" role="status" aria-live="polite"></p>
     <section id="browser" hidden aria-label="Package browser">
-      <div class="toolbar">
-        <div class="search-field">
-          <label for="search">Find a package</label>
-          <input id="search" type="search" placeholder="Search by name" autocomplete="off">
+      <nav class="menubar" aria-label="Registry navigation">
+        <div class="tabs">
+          <button id="index-tab" type="button" aria-current="page">index</button>
+          <button id="config-tab" type="button">client config</button>
         </div>
-        <div>
-          <label for="kind">Package type</label>
-          <select id="kind">
-            <option value="all">All packages</option>
-            <option value="npm">npm</option>
-            <option value="cargo">Rust crates</option>
-          </select>
+        <div class="session-controls"><span id="session" class="muted"></span><button id="refresh" type="button">refresh</button><button id="disconnect" type="button">disconnect</button></div>
+      </nav>
+
+      <section id="index" aria-labelledby="index-title">
+        <div class="section-heading"><h2 id="index-title">package index</h2><p id="count" class="muted" aria-live="polite"></p></div>
+        <div class="filters">
+          <div class="search-field"><label for="search">Filter by package or publisher <kbd>/</kbd></label><input id="search" type="search" placeholder="type to filter..." autocomplete="off" spellcheck="false"></div>
+          <div><label for="kind">Ecosystem</label><select id="kind"><option value="all">all packages</option><option value="cargo">cargo</option><option value="npm">npm</option></select></div>
         </div>
-        <button id="refresh" type="button" class="secondary">Refresh</button>
-        <button id="disconnect" type="button" class="secondary">Disconnect</button>
-      </div>
-      <details class="setup">
-        <summary>Configure your clients</summary>
-        <p>Add this to <code>~/.cargo/config.toml</code>, then set <code>CARGO_REGISTRIES_SELFHOST_TOKEN</code> to your registry token.</p>
-        <pre id="cargo-config"></pre>
-        <p>Add this to your project's <code>.npmrc</code> and set <code>REGISTRY_TOKEN</code> in your shell. Replace <code>@selfhost</code> with your package scope.</p>
-        <pre id="npm-config"></pre>
-        <p>Publish with <code>cargo publish --registry selfhost</code> or <code id="npm-publish"></code>.</p>
-      </details>
-      <p id="count" class="muted" aria-live="polite"></p>
-      <div id="packages" class="packages"></div>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Package index table">
+          <table class="package-table">
+            <caption class="sr-only">Packages and their original publishers</caption>
+            <thead><tr><th scope="col">package</th><th scope="col">type</th><th scope="col">added by</th><th scope="col">versions</th><th scope="col">tags</th></tr></thead>
+            <tbody id="packages"></tbody>
+          </table>
+        </div>
+        <p class="table-note muted">Added by = first publisher, not an ownership restriction. Unknown = not recorded.</p>
+      </section>
+
+      <section id="package-detail" hidden aria-labelledby="package-title">
+        <div class="section-heading"><h2 id="package-title" tabindex="-1"></h2><button id="back-index" type="button">back to index</button></div>
+        <dl class="package-meta"><div><dt>type</dt><dd id="package-kind"></dd></div><div><dt>added by</dt><dd id="package-publisher"></dd></div><div><dt>versions</dt><dd id="package-count"></dd></div></dl>
+        <div class="table-scroll" tabindex="0" role="region" aria-label="Package versions and install commands">
+          <table class="version-table"><caption class="sr-only">Published versions and installation commands</caption><thead><tr><th scope="col">version</th><th scope="col">status / tags</th><th scope="col">install</th></tr></thead><tbody id="versions"></tbody></table>
+        </div>
+        <p class="muted">Commands use the client configuration below. Publishing stays in Cargo and npm.</p>
+        <button id="package-config" type="button">configure clients</button>
+      </section>
+
+      <section id="client-setup" hidden aria-labelledby="setup-title">
+        <div class="section-heading"><h2 id="setup-title">client config</h2><code id="endpoint"></code></div>
+        <div class="client-grid">
+          <section aria-labelledby="cargo-title"><h3 id="cargo-title">cargo / ~/.cargo/config.toml</h3><pre id="cargo-config"></pre><p>Set <code>CARGO_REGISTRIES_SELFHOST_TOKEN</code> to your user token.</p><pre>cargo publish --registry selfhost</pre></section>
+          <section aria-labelledby="npm-title"><h3 id="npm-title">npm / .npmrc</h3><pre id="npm-config"></pre><p>Set <code>REGISTRY_TOKEN</code> in your shell. Replace <code>@selfhost</code> with your scope.</p><pre id="npm-publish"></pre></section>
+        </div>
+        <p class="muted">Keep tokens out of Git. Public reads need no token; publishing always does.</p>
+      </section>
     </section>
-    <noscript><p>This package browser needs JavaScript. Cargo and npm work without it.</p></noscript>
-    <footer>Packages stay on your server. Publish from Cargo or npm.</footer>
+    <noscript><p>This browser needs JavaScript. Cargo and npm work without it.</p></noscript>
+    <footer><span>crateyard / packages stay on your server</span><span>one binary. no database. no drama.</span></footer>
   </main>
 </body>
 </html>

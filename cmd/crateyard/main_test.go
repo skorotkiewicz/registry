@@ -45,15 +45,16 @@ func TestRegistry(t *testing.T) {
 	check(request("PUT", "/npm/../escape", []byte(`{}`), "Bearer "+testToken), 400)
 
 	archive := []byte("test archive bytes, clients check real archives in tests/smoke.sh")
+	publishToken := testToken
 	publish := func(name, version string) *httptest.ResponseRecorder {
 		t.Helper()
-		meta := []byte(`{"name":"` + name + `","vers":"` + version + `","deps":[{"name":"other","version_req":"^1","explicit_name_in_toml":"alias"}],"features":{"optional":["dep:alias"]}}`)
+		meta := []byte(`{"name":"` + name + `","vers":"` + version + `","publisher":"forged","deps":[{"name":"other","version_req":"^1","explicit_name_in_toml":"alias"}],"features":{"optional":["dep:alias"]}}`)
 		var b bytes.Buffer
 		_ = binary.Write(&b, binary.LittleEndian, uint32(len(meta)))
 		b.Write(meta)
 		_ = binary.Write(&b, binary.LittleEndian, uint32(len(archive)))
 		b.Write(archive)
-		return request("PUT", "/cargo/api/v1/crates/new", b.Bytes(), testToken)
+		return request("PUT", "/cargo/api/v1/crates/new", b.Bytes(), publishToken)
 	}
 	check(publish("my-crate", "1.0.0"), 200)
 	check(publish("my-crate", "1.0.0"), 409)
@@ -79,6 +80,22 @@ func TestRegistry(t *testing.T) {
 	check(download, 200)
 	if !bytes.Equal(download.Body.Bytes(), archive) {
 		t.Fatal("crate bytes changed")
+	}
+	const secondToken = "second-publisher-token"
+	s.users = append(s.users, user{Nick: "second", Token: secondToken})
+	publishToken = secondToken
+	check(publish("my-crate", "2.0.0"), 200)
+	var stored cratePackage
+	if err := load(s.path("cargo", "my-crate", "metadata.json"), &stored); err != nil || stored.Publisher != "tester" {
+		t.Fatalf("first publisher changed or was forged: %v, %q", err, stored.Publisher)
+	}
+	if err := save(s.path("cargo", "old-crate", "metadata.json"), cratePackage{Name: "old-crate", Versions: []map[string]any{{"vers": "1.0.0"}}}); err != nil {
+		t.Fatal(err)
+	}
+	check(publish("old-crate", "2.0.0"), 200)
+	var oldStored cratePackage
+	if err := load(s.path("cargo", "old-crate", "metadata.json"), &oldStored); err != nil || oldStored.Publisher != "" {
+		t.Fatalf("guessed the publisher of an old crate: %v, %q", err, oldStored.Publisher)
 	}
 
 	npmPublish := func(version, tag string) *httptest.ResponseRecorder {

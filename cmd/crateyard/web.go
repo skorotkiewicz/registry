@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
+	"path/filepath"
 	"sort"
 )
 
@@ -41,9 +43,10 @@ type packageVersion struct {
 }
 
 type packageSummary struct {
-	Kind     string           `json:"kind"`
-	Name     string           `json:"name"`
-	Versions []packageVersion `json:"versions"`
+	Kind      string           `json:"kind"`
+	Name      string           `json:"name"`
+	Publisher string           `json:"publisher"`
+	Versions  []packageVersion `json:"versions"`
 }
 
 func (s *registry) catalog(w http.ResponseWriter) error {
@@ -65,7 +68,7 @@ func (s *registry) catalog(w http.ResponseWriter) error {
 					}
 					return err
 				}
-				p.Name = pkg.Name
+				p.Name, p.Publisher = pkg.Name, pkg.Publisher
 				for _, entry := range pkg.Versions {
 					version, _ := entry["vers"].(string)
 					yanked, _ := entry["yanked"].(bool)
@@ -80,6 +83,10 @@ func (s *registry) catalog(w http.ResponseWriter) error {
 					return err
 				}
 				p.Name = pkg.Name
+				p.Publisher, err = url.PathUnescape(filepath.Base(filepath.Dir(filepath.Dir(path))))
+				if err != nil {
+					return err
+				}
 				for version := range pkg.Versions {
 					v := packageVersion{Version: version, Tags: []string{}}
 					for tag, target := range pkg.Tags {
