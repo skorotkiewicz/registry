@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/BurntSushi/toml"
 )
@@ -77,7 +78,7 @@ func loadConfig(path string) (config, error) {
 	}
 	nicks, tokens := map[string]bool{}, map[string]bool{}
 	for i, u := range c.Users {
-		if u.Nick == "" || len(u.Nick) > 64 || strings.TrimSpace(u.Nick) != u.Nick || strings.ContainsAny(u.Nick, "\r\n\t") {
+		if u.Nick == "" || len(u.Nick) > 64 || strings.TrimSpace(u.Nick) != u.Nick || strings.IndexFunc(u.Nick, unicode.IsControl) >= 0 {
 			return c, fmt.Errorf("users entry %d requires a nick of 1 to 64 characters without surrounding whitespace or control characters", i+1)
 		}
 		if len(u.Token) < 16 || strings.IndexFunc(u.Token, func(r rune) bool { return r < 33 || r > 126 }) >= 0 {

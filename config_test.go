@@ -57,6 +57,7 @@ idle_timeout = "20s"
 		strings.Replace(users, "alice-test-token-123456", "", 1),
 		strings.Replace(users, "alice-test-token-123456", "token with whitespace", 1),
 		strings.Replace(users, "nick = 'alice'", "nick = ''", 1),
+		strings.Replace(users, "nick = 'alice'", `nick = "ali\u007Fce"`, 1),
 		strings.Replace(users, "nick = 'alice'", "name = 'alice'", 1),
 	} {
 		if _, err := read(text); err == nil {
