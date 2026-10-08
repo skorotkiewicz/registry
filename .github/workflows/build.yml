@@ -84,55 +84,55 @@ jobs:
           fail_on_unmatched_files: true
           generate_release_notes: true
 
-#   aur-publish:
-#     name: Publish to AUR
-#     needs: release
-#     if: startsWith(github.ref, 'refs/tags/v')
-#     runs-on: ubuntu-latest
-#     container:
-#       image: archlinux:base-devel
-#     steps:
-#       - uses: actions/checkout@v4
-#
-#       - name: Setup builder user
-#         run: |
-#           pacman -Syu --noconfirm
-#           pacman -S --needed --noconfirm git openssh pacman-contrib sudo
-#           useradd -m builder
-#           echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
-#           chmod 440 /etc/sudoers.d/builder
-#           chown -R builder:builder "$GITHUB_WORKSPACE"
-#
-#       - name: Update PKGBUILD, validate package, and generate .SRCINFO
-#         shell: bash
-#         run: |
-#           VERSION=$(cat VERSION)
-#           if [[ "$GITHUB_REF_NAME" != "v$VERSION" ]]; then
-#             echo 'Release tag must match VERSION.' >&2
-#             exit 1
-#           fi
-#           if [[ ! "$VERSION" =~ ^[0-9][A-Za-z0-9._+-]*$ ]]; then
-#             echo 'Tag must start with v followed by a version number.' >&2
-#             exit 1
-#           fi
-#           sed -i "s/^pkgver=.*/pkgver=${VERSION//-/_}/" .github/arch/PKGBUILD
-#           sed -i 's/^pkgrel=.*/pkgrel=1/' .github/arch/PKGBUILD
-#           sed -i "s/^_tag=.*/_tag=$GITHUB_REF_NAME/" .github/arch/PKGBUILD
-#           sudo -u builder bash -euc '
-#             cd "$1"
-#             updpkgsums
-#             makepkg --syncdeps --noconfirm
-#             makepkg --printsrcinfo > .SRCINFO
-#           ' _ "$GITHUB_WORKSPACE/.github/arch"
-#
-#       - name: Publish AUR package
-#         uses: KSXGitHub/github-actions-deploy-aur@v4.1.2
-#         with:
-#           pkgname: crateyard-bin
-#           pkgbuild: ./.github/arch/PKGBUILD
-#           assets: ./.github/arch/.SRCINFO
-#           commit_username: ${{ secrets.AUR_USERNAME }}
-#           commit_email: ${{ secrets.AUR_EMAIL }}
-#           ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
-#           commit_message: "aur: ${{ github.ref_name }}"
-#           ssh_keyscan_types: rsa,ecdsa,ed25519
+  aur-publish:
+    name: Publish to AUR
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:base-devel
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup builder user
+        run: |
+          pacman -Syu --noconfirm
+          pacman -S --needed --noconfirm git openssh pacman-contrib sudo
+          useradd -m builder
+          echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builder
+          chmod 440 /etc/sudoers.d/builder
+          chown -R builder:builder "$GITHUB_WORKSPACE"
+
+      - name: Update PKGBUILD, validate package, and generate .SRCINFO
+        shell: bash
+        run: |
+          VERSION=$(cat VERSION)
+          if [[ "$GITHUB_REF_NAME" != "v$VERSION" ]]; then
+            echo 'Release tag must match VERSION.' >&2
+            exit 1
+          fi
+          if [[ ! "$VERSION" =~ ^[0-9][A-Za-z0-9._+-]*$ ]]; then
+            echo 'Tag must start with v followed by a version number.' >&2
+            exit 1
+          fi
+          sed -i "s/^pkgver=.*/pkgver=${VERSION//-/_}/" .github/arch/PKGBUILD
+          sed -i 's/^pkgrel=.*/pkgrel=1/' .github/arch/PKGBUILD
+          sed -i "s/^_tag=.*/_tag=$GITHUB_REF_NAME/" .github/arch/PKGBUILD
+          sudo -u builder bash -euc '
+            cd "$1"
+            updpkgsums
+            makepkg --syncdeps --noconfirm
+            makepkg --printsrcinfo > .SRCINFO
+          ' _ "$GITHUB_WORKSPACE/.github/arch"
+
+      - name: Publish AUR package
+        uses: KSXGitHub/github-actions-deploy-aur@v4.1.2
+        with:
+          pkgname: crateyard-bin
+          pkgbuild: ./.github/arch/PKGBUILD
+          assets: ./.github/arch/.SRCINFO
+          commit_username: ${{ secrets.AUR_USERNAME }}
+          commit_email: ${{ secrets.AUR_EMAIL }}
+          ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          commit_message: "aur: ${{ github.ref_name }}"
+          ssh_keyscan_types: rsa,ecdsa,ed25519
