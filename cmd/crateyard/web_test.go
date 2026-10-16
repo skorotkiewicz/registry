@@ -51,7 +51,7 @@ func TestWeb(t *testing.T) {
 	if err := save(s.path("cargo", "example-crate", "metadata.json"), cratePackage{Name: "example-crate", Publisher: "crate-user", Versions: []map[string]any{{"vers": "1.0.0", "yanked": true}, {"vers": "2.0.0", "yanked": false}}}); err != nil {
 		t.Fatal(err)
 	}
-	dir, err := s.npmDir("@my/example", "tester/admin")
+	dir, err := s.packageDir("npm", "@my/example", "tester/admin")
 	if err != nil {
 		t.Fatal(err)
 	}

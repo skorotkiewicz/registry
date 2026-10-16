@@ -95,6 +95,11 @@ answer = ["dep:leaf_alias"]
 EOF
 printf 'pub fn answer() -> u32 { leaf_alias::answer() }\n' > src/lib.rs
 cargo publish --registry selfhost --allow-dirty
+for package in smoke_leaf smoke_top; do
+  [[ -f "$work/data/cargo/smokepublisher/$package/metadata.json" ]]
+  [[ -f "$work/data/cargo/smokepublisher/$package/0.1.0.crate" ]]
+  [[ ! -e "$work/data/cargo/$package" ]]
+done
 # Use a fresh Cargo cache to force real index and archive downloads.
 export CARGO_HOME="$work/cargo-consumer-home"
 mkdir -p "$CARGO_HOME"

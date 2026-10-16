@@ -86,7 +86,7 @@ func TestRegistry(t *testing.T) {
 	publishToken = secondToken
 	check(publish("my-crate", "2.0.0"), 200)
 	var stored cratePackage
-	if err := load(s.path("cargo", "my-crate", "metadata.json"), &stored); err != nil || stored.Publisher != "tester" {
+	if err := load(filepath.Join(s.data, "cargo", "tester", "my_crate", "metadata.json"), &stored); err != nil || stored.Publisher != "tester" {
 		t.Fatalf("first publisher changed or was forged: %v, %q", err, stored.Publisher)
 	}
 	if err := save(s.path("cargo", "old-crate", "metadata.json"), cratePackage{Name: "old-crate", Versions: []map[string]any{{"vers": "1.0.0"}}}); err != nil {
@@ -136,7 +136,7 @@ func TestRegistry(t *testing.T) {
 	check(request("GET", "/npm/@mine%2fexample/-/../../metadata.json", nil, "Bearer "+testToken), 404)
 	check(request("GET", "/npm/missing", nil, "Bearer "+testToken), 404)
 	// Corrupt records must not be mistaken for a missing package and overwritten.
-	dir, err := s.npmDir("broken", "tester")
+	dir, err := s.packageDir("npm", "broken", "tester")
 	if err != nil {
 		t.Fatal(err)
 	}

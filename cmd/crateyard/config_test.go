@@ -84,7 +84,7 @@ func TestAccessModes(t *testing.T) {
 			if err := atomicWrite(s.path("cargo", "example", "1.0.0.crate"), []byte("archive")); err != nil {
 				t.Fatal(err)
 			}
-			dir, err := s.npmDir("@my/example", "alice")
+			dir, err := s.packageDir("npm", "@my/example", "alice")
 			if err != nil {
 				t.Fatal(err)
 			}

@@ -187,11 +187,10 @@ func (s *registry) metadataPaths(kind string) ([]string, error) {
 			continue
 		}
 		path := filepath.Join(root, dir.Name())
-		if kind != "npm" {
+		if kind == "cargo" {
 			if err := add(path); err != nil {
 				return nil, err
 			}
-			continue
 		}
 		packages, err := os.ReadDir(path)
 		if err != nil {
@@ -208,9 +207,12 @@ func (s *registry) metadataPaths(kind string) ([]string, error) {
 	return paths, nil
 }
 
-func (s *registry) npmDir(name, nick string) (string, error) {
-	// ponytail: scan directories to resolve global npm names; add a lookup index if the registry grows.
-	paths, err := s.metadataPaths("npm")
+func (s *registry) packageDir(kind, name, nick string) (string, error) {
+	if kind == "cargo" {
+		name = strings.ReplaceAll(name, "-", "_")
+	}
+	// shortcut: scan directories for global package names, add an index if the registry grows.
+	paths, err := s.metadataPaths(kind)
 	if err != nil {
 		return "", err
 	}
@@ -220,7 +222,7 @@ func (s *registry) npmDir(name, nick string) (string, error) {
 			continue
 		}
 		if found != "" {
-			return "", fmt.Errorf("npm package %s exists in multiple directories", name)
+			return "", fmt.Errorf("%s package %s exists in multiple directories", kind, name)
 		}
 		found = filepath.Dir(path)
 	}
@@ -234,7 +236,7 @@ func (s *registry) npmDir(name, nick string) (string, error) {
 	if owner == "." || owner == ".." {
 		owner = strings.ReplaceAll(owner, ".", "%2E")
 	}
-	return filepath.Join(s.data, "npm", owner, url.PathEscape(name)), nil
+	return filepath.Join(s.data, kind, owner, url.PathEscape(name)), nil
 }
 
 func load(path string, value any) error {
@@ -323,8 +325,12 @@ func (s *registry) cargo(w http.ResponseWriter, r *http.Request) error {
 	parts := strings.Split(p, "/")
 	if len(parts) == 6 && strings.Join(parts[:3], "/") == "api/v1/crates" && crateName.MatchString(parts[3]) && validVersion(parts[4]) {
 		name, version, action := parts[3], parts[4], parts[5]
+		dir, err := s.packageDir("cargo", name, "")
 		var pkg cratePackage
-		if err := load(s.path("cargo", name, "metadata.json"), &pkg); err != nil {
+		if err == nil {
+			err = load(filepath.Join(dir, "metadata.json"), &pkg)
+		}
+		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
 				fail(w, 404, "crate not found")
 				return nil
@@ -336,12 +342,12 @@ func (s *registry) cargo(w http.ResponseWriter, r *http.Request) error {
 				continue
 			}
 			if action == "download" && (r.Method == "GET" || r.Method == "HEAD") {
-				http.ServeFile(w, r, s.path("cargo", name, version+".crate"))
+				http.ServeFile(w, r, filepath.Join(dir, version+".crate"))
 				return nil
 			}
 			if (action == "yank" && r.Method == "DELETE") || (action == "unyank" && r.Method == "PUT") {
 				entry["yanked"] = action == "yank"
-				if err := save(s.path("cargo", name, "metadata.json"), pkg); err != nil {
+				if err := save(filepath.Join(dir, "metadata.json"), pkg); err != nil {
 					return err
 				}
 				reply(w, 200, map[string]bool{"ok": true})
@@ -351,8 +357,12 @@ func (s *registry) cargo(w http.ResponseWriter, r *http.Request) error {
 	} else if r.Method == "GET" || r.Method == "HEAD" {
 		name := parts[len(parts)-1]
 		if crateName.MatchString(name) && p == indexPath(name) {
+			dir, err := s.packageDir("cargo", name, "")
 			var pkg cratePackage
-			if err := load(s.path("cargo", name, "metadata.json"), &pkg); err != nil {
+			if err == nil {
+				err = load(filepath.Join(dir, "metadata.json"), &pkg)
+			}
+			if err != nil {
 				if errors.Is(err, os.ErrNotExist) {
 					fail(w, 404, "crate not found")
 					return nil
@@ -438,7 +448,12 @@ func (s *registry) publishCrate(w http.ResponseWriter, r *http.Request) error {
 	if m.Features == nil {
 		m.Features = map[string][]string{}
 	}
-	path := s.path("cargo", m.Name, "metadata.json")
+	nick := s.nickname(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "))
+	dir, err := s.packageDir("cargo", m.Name, nick)
+	if err != nil {
+		return err
+	}
+	path := filepath.Join(dir, "metadata.json")
 	pkg := cratePackage{Name: m.Name}
 	if err := load(path, &pkg); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
@@ -455,11 +470,11 @@ func (s *registry) publishCrate(w http.ResponseWriter, r *http.Request) error {
 	}
 	hash := sha256.Sum256(archive)
 	entry := map[string]any{"name": m.Name, "vers": m.Version, "deps": m.Deps, "cksum": hex.EncodeToString(hash[:]), "features": map[string]any{}, "features2": m.Features, "v": 2, "yanked": false, "links": m.Links, "rust_version": m.RustVersion}
-	if err := atomicWrite(s.path("cargo", m.Name, m.Version+".crate"), archive); err != nil {
+	if err := atomicWrite(filepath.Join(dir, m.Version+".crate"), archive); err != nil {
 		return err
 	}
 	if len(pkg.Versions) == 0 {
-		pkg.Publisher = s.nickname(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "))
+		pkg.Publisher = nick
 	}
 	pkg.Versions = append(pkg.Versions, entry)
 	if err := save(path, pkg); err != nil {
@@ -492,7 +507,7 @@ func (s *registry) npm(w http.ResponseWriter, r *http.Request) error {
 		fail(w, 400, "invalid npm package name")
 		return nil
 	}
-	dir, err := s.npmDir(name, s.nickname(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")))
+	dir, err := s.packageDir("npm", name, s.nickname(strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")))
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			fail(w, 404, "package not found")

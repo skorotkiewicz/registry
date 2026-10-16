@@ -4,7 +4,7 @@
   <img src=".github/assets/logo.svg" width="420" alt="Crateyard: a goofy undead crate with nerd glasses beside a floppy-disk headstone">
 </p>-->
 
-<img align="right" src=".github/assets/logo.svg" width="220" height="220" alt="Crateyard: a goofy undead crate with nerd glasses beside a floppy-disk headstone">
+<!--<img align="right" src=".github/assets/logo.svg" width="220" height="220" alt="Crateyard: a goofy undead crate with nerd glasses beside a floppy-disk headstone">-->
 
 <p align="center">
   <a href="https://github.com/skorotkiewicz/registry/actions/workflows/build.yml"><img src="https://github.com/skorotkiewicz/registry/actions/workflows/build.yml/badge.svg" alt="Build and release status"></a>
@@ -188,9 +188,9 @@ Replace both URLs in `.npmrc` when using another host. For HTTPS, the auth key s
 
 ## Storage and limits
 
-npm packages are stored in `data/npm/<userName>/<packageName>/`, using the first publisher's configured `nick`. Metadata and all version archives stay in that directory, even when another user publishes an update. Special characters in directory names are URL-escaped, so `@scope/example` becomes `@scope%2Fexample` on disk. The configured `data_dir` replaces `data` in these paths.
+Cargo packages are stored in `data/cargo/<userName>/<packageName>/` and npm packages in `data/npm/<userName>/<packageName>/`, using the first publisher's configured `nick`. Metadata and all version archives stay in that directory, even when another user publishes an update. Cargo directory names normalize `-` to `_`. Special characters in directory names are URL-escaped, so `@scope/example` becomes `@scope%2Fexample` on disk. The configured `data_dir` replaces `data` in these paths.
 
-npm package names remain global and client URLs do not change. This folder grouping does not add ownership restrictions. Removing a user does not remove their packages. Cargo storage is unchanged.
+Package names remain global within each registry and client URLs do not change. This folder grouping does not add ownership restrictions. Removing a user does not remove their packages. Existing flat Cargo directories remain readable and receive updates in place; they are not automatically moved.
 
 - Published versions cannot be overwritten. Cargo yank changes availability without deleting the archive.
 - Uploads commit the archive first and then atomically replace metadata. An interrupted publish can leave an unused archive or temporary file, but not a partial committed archive.
